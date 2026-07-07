@@ -9,6 +9,9 @@ use App\Models\LogAktivitas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Reader\XLSX\Reader;
+use OpenSpout\Writer\XLSX\Writer;
 
 class SekretarisController extends Controller
 {
@@ -236,5 +239,174 @@ class SekretarisController extends Controller
         ]);
 
         return response()->json(['success' => true, 'message' => "Anggota {$anggota->nama} berhasil diaktifkan kembali."]);
+    }
+
+    // ---------------------------------------------------------------
+    //  Import & Template Anggota
+    // ---------------------------------------------------------------
+
+    public function downloadTemplateAnggota()
+    {
+        $writer = new Writer();
+        $writer->openToBrowser('Template-Import-Anggota.xlsx');
+
+        $writer->addRow(Row::fromValues([
+            'PETUNJUK: Isi setiap kolom sesuai petunjuk di bawah. Hapus baris contoh sebelum import.',
+            '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'nomor_anggota', 'nama', 'email', 'telepon', 'alamat', 'status',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            '(auto)', 'Contoh Nama', 'contoh@email.com', '08123456789', 'Alamat lengkap', 'aktif',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'KETERANGAN KOLOM:',
+            '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'nomor_anggota',
+            'Opsional. Format RKM-XXXXX. Kosongkan untuk diisi otomatis.',
+            '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'nama',
+            'Wajib. Nama lengkap anggota.',
+            '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'email',
+            'Wajib. Alamat email (harus unik).',
+            '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'telepon',
+            'Wajib. Nomor telepon.',
+            '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'alamat',
+            'Wajib. Alamat lengkap anggota.',
+            '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'status',
+            'Opsional. "aktif" atau "non_aktif". Default: aktif.',
+            '', '', '', '',
+        ]));
+
+        $writer->close();
+        exit;
+    }
+
+    public function importAnggota(Request $request)
+    {
+        $request->validate([
+            'file_import' => 'required|file|mimes:xlsx,xls,ods|max:5120',
+        ]);
+
+        $file = $request->file('file_import');
+        $filePath = $file->getRealPath();
+
+        $reader = new Reader();
+        $reader->open($filePath);
+
+        $berhasil = 0;
+        $gagal = 0;
+        $errors = [];
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $idx => $row) {
+                if ($idx === 1) continue;
+
+                $cells = $row->toArray();
+
+                $nomorAnggota = trim((string) ($cells[0] ?? ''));
+                $nama = trim((string) ($cells[1] ?? ''));
+                $email = trim((string) ($cells[2] ?? ''));
+                $telepon = trim((string) ($cells[3] ?? ''));
+                $alamat = trim((string) ($cells[4] ?? ''));
+                $status = trim((string) ($cells[5] ?? ''));
+
+                if (empty($nama) && empty($email)) continue;
+
+                try {
+                    if (empty($nama)) throw new \Exception("Baris $idx: nama wajib diisi.");
+                    if (empty($email)) throw new \Exception("Baris $idx: email wajib diisi.");
+                    if (empty($telepon)) throw new \Exception("Baris $idx: telepon wajib diisi.");
+                    if (empty($alamat)) throw new \Exception("Baris $idx: alamat wajib diisi.");
+
+                    if (Anggota::where('email', $email)->exists()) {
+                        throw new \Exception("Baris $idx: email \"$email\" sudah terdaftar.");
+                    }
+
+                    if (empty($status)) {
+                        $status = 'aktif';
+                    } elseif (!in_array($status, ['aktif', 'non_aktif'])) {
+                        throw new \Exception("Baris $idx: status \"$status\" tidak valid. Gunakan aktif atau non_aktif.");
+                    }
+
+                    if (empty($nomorAnggota)) {
+                        $lastId = Anggota::max('id') ?? 0;
+                        $nomorAnggota = 'RKM-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+
+                        while (Anggota::where('nomor_anggota', $nomorAnggota)->exists()) {
+                            $lastId++;
+                            $nomorAnggota = 'RKM-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+                        }
+                    } else {
+                        if (Anggota::where('nomor_anggota', $nomorAnggota)->exists()) {
+                            throw new \Exception("Baris $idx: nomor anggota \"$nomorAnggota\" sudah terdaftar.");
+                        }
+                    }
+
+                    Anggota::create([
+                        'nomor_anggota' => $nomorAnggota,
+                        'nama' => $nama,
+                        'email' => $email,
+                        'telepon' => $telepon,
+                        'alamat' => $alamat,
+                        'status' => $status,
+                        'created_by' => Auth::id(),
+                    ]);
+
+                    LogAktivitas::create([
+                        'user_id' => Auth::id(),
+                        'aksi' => 'import',
+                        'deskripsi' => "Import anggota {$nama} - {$nomorAnggota}",
+                        'modul' => 'Sekretaris',
+                        'referensi_id' => 0,
+                    ]);
+
+                    $berhasil++;
+                } catch (\Exception $e) {
+                    $gagal++;
+                    $errors[] = $e->getMessage();
+                }
+            }
+        }
+
+        $reader->close();
+
+        return response()->json([
+            'success' => $berhasil > 0,
+            'message' => "Import selesai: $berhasil berhasil, $gagal gagal.",
+            'berhasil' => $berhasil,
+            'gagal' => $gagal,
+            'errors' => $errors,
+        ]);
     }
 }

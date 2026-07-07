@@ -1,8 +1,8 @@
 // Service Worker untuk RKM Al-Jannah
 // Caching strategy: preloader shell + page caching + image caching
-var CACHE_SHELL = 'rkm-shell-v2';
-var CACHE_PAGES = 'rkm-pages-v3';
-var CACHE_IMAGES = 'rkm-images-v2';
+var CACHE_SHELL = 'rkm-shell-v5';
+var CACHE_PAGES = 'rkm-pages-v6';
+var CACHE_IMAGES = 'rkm-images-v5';
 
 var STATIC_ASSETS = [
     '/preloader.html',
@@ -123,5 +123,6 @@ function isDownloadRequest(request) {
     var exts = ['.xlsx', '.xls', '.pdf', '.docx', '.doc', '.zip', '.csv', '.ods'];
     if (exts.some(function (e) { return path.endsWith(e); })) return true;
     if (path.indexOf('/export') !== -1) return true;
+    if (path.indexOf('/template') !== -1) return true;
     return false;
 }

@@ -14,6 +14,7 @@ use App\Models\PermintaanIzin;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use OpenSpout\Common\Entity\Row;
+use OpenSpout\Reader\XLSX\Reader;
 use OpenSpout\Writer\XLSX\Writer;
 
 class BendaharaController extends Controller
@@ -848,6 +849,261 @@ class BendaharaController extends Controller
 
         $writer->close();
         exit;
+    }
+
+    // ---------------------------------------------------------------
+    //  Import & Template Transaksi
+    // ---------------------------------------------------------------
+
+    public function downloadTemplateTransaksi()
+    {
+        $kategoriPemasukan = KategoriPemasukan::pluck('nama');
+        $kategoriPengeluaran = KategoriPengeluaran::pluck('nama');
+
+        $writer = new Writer();
+        $writer->openToBrowser('Template-Import-Transaksi.xlsx');
+
+        $writer->addRow(Row::fromValues([
+            'PETUNJUK: Isi setiap kolom sesuai dengan petunjuk di bawah. Hapus baris contoh sebelum import.',
+            '', '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'tipe', 'tanggal', 'kategori', 'jumlah', 'keterangan',
+            'anggota_id', 'tahun', 'bulan_mulai', 'jumlah_bulan',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'pemasukan', date('Y-m-d'), $kategoriPemasukan->first() ?? 'Contoh',
+            500000, 'Contoh pemasukan', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'pengeluaran', date('Y-m-d'), $kategoriPengeluaran->first() ?? 'Contoh',
+            100000, 'Contoh pengeluaran', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'iuran', date('Y-m-d'), '',
+            50000, 'Iuran 6 bulan', '1', date('Y'), '1', '6',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            '', '', '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'KETERANGAN KOLOM:',
+            '', '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'tipe',
+            'Wajib. Isi "pemasukan", "pengeluaran", atau "iuran".',
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'tanggal',
+            'Wajib. Format YYYY-MM-DD, contoh: 2024-01-15',
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'kategori',
+            'Wajib untuk pemasukan/pengeluaran. Kosongkan untuk iuran. Gunakan nama kategori yang sudah ada.',
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'jumlah',
+            'Wajib. Angka tanpa titik/koma. Untuk iuran: nominal per bulan.',
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'keterangan',
+            'Opsional. Deskripsi transaksi.',
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'anggota_id',
+            'Wajib untuk iuran. ID anggota dari sistem.',
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'tahun',
+            'Wajib untuk iuran. Contoh: 2024',
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'bulan_mulai',
+            'Wajib untuk iuran. Bulan mulai (1-12).',
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'jumlah_bulan',
+            'Wajib untuk iuran. Jumlah bulan (1-12).',
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->close();
+        exit;
+    }
+
+    public function importTransaksi(Request $request)
+    {
+        $request->validate([
+            'file_import' => 'required|file|mimes:xlsx,xls,ods|max:5120',
+        ]);
+
+        $file = $request->file('file_import');
+        $filePath = $file->getRealPath();
+
+        $reader = new Reader();
+        $reader->open($filePath);
+
+        $berhasil = 0;
+        $gagal = 0;
+        $errors = [];
+
+        $kategoriPemasukanMap = KategoriPemasukan::pluck('id', 'nama');
+        $kategoriPengeluaranMap = KategoriPengeluaran::pluck('id', 'nama');
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $idx => $row) {
+                if ($idx === 1) continue;
+
+                $cells = $row->toArray();
+
+                $tipe = trim((string) ($cells[0] ?? ''));
+                $tanggal = trim((string) ($cells[1] ?? ''));
+                $kategoriNama = trim((string) ($cells[2] ?? ''));
+                $jumlah = $cells[3] ?? '';
+                $keterangan = trim((string) ($cells[4] ?? ''));
+                $anggotaId = trim((string) ($cells[5] ?? ''));
+                $tahun = trim((string) ($cells[6] ?? ''));
+                $bulanMulai = (int) ($cells[7] ?? 0);
+                $jumlahBulan = (int) ($cells[8] ?? 0);
+
+                if (empty($tipe)) continue;
+
+                try {
+                    \DB::beginTransaction();
+
+                    if ($tipe === 'pemasukan' || $tipe === 'pengeluaran') {
+                        if (empty($tanggal) || empty($kategoriNama) || $jumlah === '' || (float) $jumlah <= 0) {
+                            throw new \Exception("Baris $idx: kolom tanggal, kategori, dan jumlah wajib diisi.");
+                        }
+
+                        $jumlahFloat = (float) $jumlah;
+
+                        if ($tipe === 'pemasukan') {
+                            $kategoriId = $kategoriPemasukanMap[$kategoriNama] ?? null;
+                            if (!$kategoriId) {
+                                throw new \Exception("Baris $idx: kategori pemasukan \"$kategoriNama\" tidak ditemukan.");
+                            }
+
+                            Pemasukan::create([
+                                'tanggal' => $tanggal,
+                                'kategori_pemasukan_id' => $kategoriId,
+                                'jumlah' => $jumlahFloat,
+                                'keterangan' => $keterangan ?: null,
+                                'created_by' => auth()->id(),
+                            ]);
+                        } else {
+                            $kategoriId = $kategoriPengeluaranMap[$kategoriNama] ?? null;
+                            if (!$kategoriId) {
+                                throw new \Exception("Baris $idx: kategori pengeluaran \"$kategoriNama\" tidak ditemukan.");
+                            }
+
+                            Pengeluaran::create([
+                                'tanggal' => $tanggal,
+                                'kategori_pengeluaran_id' => $kategoriId,
+                                'jumlah' => $jumlahFloat,
+                                'keterangan' => $keterangan ?: null,
+                                'created_by' => auth()->id(),
+                            ]);
+                        }
+                    } elseif ($tipe === 'iuran') {
+                        if (empty($anggotaId) || empty($tahun) || $bulanMulai < 1 || $bulanMulai > 12 || $jumlahBulan < 1 || $jumlahBulan > 12 || $jumlah === '' || (float) $jumlah <= 0) {
+                            throw new \Exception("Baris $idx: kolom anggota_id, tahun, bulan_mulai, jumlah_bulan, dan jumlah wajib diisi dengan benar.");
+                        }
+
+                        $anggota = Anggota::find($anggotaId);
+                        if (!$anggota) {
+                            throw new \Exception("Baris $idx: anggota dengan ID $anggotaId tidak ditemukan.");
+                        }
+
+                        $tahunMulai = max(2025, $anggota->tanggal_aktif_kembali
+                            ? (int) \Carbon\Carbon::parse($anggota->tanggal_aktif_kembali)->format('Y')
+                            : (int) $anggota->created_at->format('Y'));
+
+                        if ((int) $tahun < $tahunMulai) {
+                            throw new \Exception("Baris $idx: anggota ini mulai aktif tahun $tahunMulai.");
+                        }
+
+                        for ($y = $tahunMulai; $y < (int) $tahun; $y++) {
+                            $bulanLunas = IuranTahunan::where('anggota_id', $anggotaId)
+                                ->where('tahun', $y)
+                                ->where('status', 'lunas')
+                                ->count();
+                            if ($bulanLunas < 12) {
+                                throw new \Exception("Baris $idx: anggota masih punya tanggungan iuran tahun $y.");
+                            }
+                        }
+
+                        $nominalPerBulan = (float) $jumlah;
+                        $totalNominal = $nominalPerBulan * $jumlahBulan;
+                        $bulanAkhir = min($bulanMulai + $jumlahBulan - 1, 12);
+
+                        $pemasukan = Pemasukan::create([
+                            'tanggal' => $tanggal,
+                            'kategori_pemasukan_id' => 1,
+                            'jumlah' => $totalNominal,
+                            'keterangan' => 'Iuran ' . $jumlahBulan . ' bln' . ($keterangan ? ' - ' . $keterangan : ''),
+                            'created_by' => auth()->id(),
+                        ]);
+
+                        for ($b = $bulanMulai; $b <= $bulanAkhir; $b++) {
+                            IuranTahunan::create([
+                                'tahun' => (int) $tahun,
+                                'anggota_id' => $anggotaId,
+                                'bulan' => $b,
+                                'nominal' => $nominalPerBulan,
+                                'status' => 'lunas',
+                                'tanggal_bayar' => $tanggal,
+                                'verified_by' => auth()->id(),
+                                'pemasukan_id' => $pemasukan->id,
+                            ]);
+                        }
+                    } else {
+                        throw new \Exception("Baris $idx: tipe \"$tipe\" tidak valid. Gunakan pemasukan, pengeluaran, atau iuran.");
+                    }
+
+                    \DB::commit();
+                    $berhasil++;
+                } catch (\Exception $e) {
+                    \DB::rollBack();
+                    $gagal++;
+                    $errors[] = $e->getMessage();
+                }
+            }
+        }
+
+        $reader->close();
+
+        return response()->json([
+            'success' => $berhasil > 0,
+            'message' => "Import selesai: $berhasil berhasil, $gagal gagal.",
+            'berhasil' => $berhasil,
+            'gagal' => $gagal,
+            'errors' => $errors,
+        ]);
     }
 
     // ---------------------------------------------------------------

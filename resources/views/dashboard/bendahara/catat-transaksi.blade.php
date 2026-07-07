@@ -26,15 +26,30 @@
         <h1>Catat Transaksi</h1>
         <p class="subtitle">Pencatatan transaksi keuangan RKM Al-Jannah</p>
     </div>
-    <button class="btn-primary" onclick="openModalTransaksi()" data-loading data-loading-text="Membuka..." style="display:inline-flex;align-items:center;gap:6px;">
-        <span class="material-icons" style="font-size:18px;">add</span>
-        Tambah Transaksi
-    </button>
+    <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="openModalImport()" style="display:inline-flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:18px;">upload_file</span>
+            Import
+        </button>
+        <a href="{{ route('bendahara.catat-transaksi.template') }}" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;">
+            <span class="material-icons" style="font-size:18px;">description</span>
+            Template
+        </a>
+        <button class="btn-primary" onclick="openModalTransaksi()" data-loading data-loading-text="Membuka..." style="display:inline-flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:18px;">add</span>
+            Tambah Transaksi
+        </button>
+    </div>
 </div>
 
 <div id="toastSuccess" class="toast-success">
     <span class="material-icons">check_circle</span>
     Transaksi berhasil dicatat
+</div>
+
+<div id="toastImportError" class="toast-success" style="display:none;background:#dc2626;">
+    <span class="material-icons">error</span>
+    <span id="toastImportMsg"></span>
 </div>
 
 <div class="table-card" style="margin-top:24px;">
@@ -191,6 +206,66 @@
     function closeInfoModal() {
         document.getElementById('modalInfo').classList.remove('active');
     }
+
+    function openModalImport() {
+        document.getElementById('modalImport').classList.add('active');
+        document.getElementById('importFile').value = '';
+        document.getElementById('importFilePlaceholder').textContent = 'Upload here...';
+        document.getElementById('importResult').style.display = 'none';
+    }
+
+    function closeModalImport() {
+        document.getElementById('modalImport').classList.remove('active');
+    }
+
+    function importTransaksi() {
+        var btn = document.querySelector('#modalImport [data-loading]');
+        var fileInput = document.getElementById('importFile');
+        if (!fileInput.files[0]) { alert('Harap pilih file Excel terlebih dahulu.'); return; }
+
+        var formData = new FormData();
+        formData.append('file_import', fileInput.files[0]);
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-spinner"></span> Mengimport...';
+
+        fetchAPI('{{ route('bendahara.catat-transaksi.import') }}', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+            body: formData
+        })
+        .then(function(res) {
+            var resultDiv = document.getElementById('importResult');
+            resultDiv.style.display = 'block';
+
+            if (res.errors && res.errors.length > 0) {
+                var list = '<ul style="margin:8px 0 0 16px;font-size:12px;color:#dc2626;text-align:left;">';
+                for (var i = 0; i < Math.min(res.errors.length, 10); i++) {
+                    list += '<li>' + res.errors[i] + '</li>';
+                }
+                if (res.errors.length > 10) {
+                    list += '<li>...dan ' + (res.errors.length - 10) + ' error lainnya</li>';
+                }
+                list += '</ul>';
+                resultDiv.innerHTML = '<div style="color:' + (res.berhasil > 0 ? '#059669' : '#dc2626') + ';font-weight:600;">' + res.message + '</div>' + list;
+            } else {
+                resultDiv.innerHTML = '<div style="color:#059669;font-weight:600;">' + res.message + '</div>';
+            }
+
+            if (res.berhasil > 0) {
+                setTimeout(function() { location.reload(); }, 2000);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = 'Import';
+        })
+        .catch(function(e) {
+            btn.disabled = false;
+            btn.innerHTML = 'Import';
+            document.getElementById('importResult').style.display = 'block';
+            document.getElementById('importResult').innerHTML = '<div style="color:#dc2626;font-weight:600;">Gagal: ' + e.message + '</div>';
+        });
+    }
 </script>
 @endsection
 
@@ -290,6 +365,35 @@
         </div>
         <div class="modal-actions" style="margin-top:24px;">
             <button class="btn-batal" onclick="closeInfoModal()">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalImport" class="modal-overlay">
+    <div class="modal-bg"></div>
+    <div class="modal-box" style="max-width:520px;">
+        <div class="modal-icon">
+            <span class="material-icons">upload_file</span>
+        </div>
+        <h3>Import Data Transaksi & Iuran</h3>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;text-align:center;">
+            Upload file Excel (.xlsx) untuk mengimport data pemasukan, pengeluaran, dan iuran anggota secara massal.
+            <br><a href="{{ route('bendahara.catat-transaksi.template') }}" style="color:var(--primary-500);font-weight:500;">Download template</a> terlebih dahulu jika belum punya.
+        </p>
+        <div class="form-group" style="margin-bottom:18px;">
+            <label>Pilih File Excel</label>
+            <div class="file-upload" onclick="this.querySelector('input').click();" style="width:100%;padding:12px 16px;border:1px dashed #d1d5db;border-radius:8px;text-align:center;cursor:pointer;box-sizing:border-box;">
+                <input type="file" id="importFile" accept=".xlsx,.xls,.ods" required onchange="document.getElementById('importFilePlaceholder').textContent = this.files[0].name;" style="display:none;">
+                <span id="importFilePlaceholder" class="upload-placeholder" style="font-size:13px;color:#9ca3af;">Upload here...</span>
+                <div class="upload-icon">
+                    <span class="material-icons" style="font-size:18px;vertical-align:middle;color:#6b7280;">cloud_upload</span>
+                </div>
+            </div>
+        </div>
+        <div id="importResult" style="display:none;padding:12px;border-radius:8px;background:#f9fafb;margin-bottom:16px;font-size:13px;"></div>
+        <div class="modal-actions">
+            <button class="btn-batal" onclick="closeModalImport()">Tutup</button>
+            <button class="btn-minta" data-loading onclick="importTransaksi()">Import</button>
         </div>
     </div>
 </div>

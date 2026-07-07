@@ -522,6 +522,10 @@ body {
 .btn-primary:hover { opacity: .9; box-shadow: 0 4px 14px rgba(22, 66, 60, 0.3); }
 .btn-primary:active { transform: scale(.97); }
 .btn-primary .material-icons { font-size: 20px; }
+.btn-secondary { display: inline-flex; align-items: center; gap: 10px; background: #fff; color: var(--primary-500); font-size: 14px; font-weight: 600; padding: 14px 28px; border-radius: 100px; border: 2px solid var(--primary-200); cursor: pointer; transition: all .2s; text-decoration: none; }
+.btn-secondary:hover { background: var(--primary-50); border-color: var(--primary-500); box-shadow: 0 4px 14px rgba(22, 66, 60, 0.1); }
+.btn-secondary:active { transform: scale(.97); }
+.btn-secondary .material-icons { font-size: 20px; }
 
 .form-card { background: #fff; border-radius: 28px; border: 2px solid var(--primary-500); padding: 36px 40px; box-shadow: 0 4px 16px rgba(0,0,0,.05); margin-bottom: 36px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 24px; }

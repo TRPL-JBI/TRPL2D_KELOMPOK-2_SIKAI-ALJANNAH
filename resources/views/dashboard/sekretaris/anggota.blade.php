@@ -45,9 +45,19 @@
             </form>
         </div>
 
-        <!-- Table Header -->
-        <div style="background-color: var(--primary-500); padding: 10px 20px;">
-            <h2 style="color: white; font-size: 14px; font-weight: 700; margin: 0;">Anggota</h2>
+        <!-- Action Bar -->
+        <div style="padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; background: #fff; border-bottom: 1px solid #e5e7eb;">
+            <h2 style="color: var(--primary-900); font-size: 14px; font-weight: 700; margin: 0;">Anggota</h2>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-secondary" onclick="openModalImport()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:12px;">
+                    <span class="material-icons" style="font-size:16px;">upload_file</span>
+                    Import
+                </button>
+                <a href="{{ route('sekretaris.anggota.template') }}" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;padding:8px 16px;font-size:12px;">
+                    <span class="material-icons" style="font-size:16px;">description</span>
+                    Template
+                </a>
+            </div>
         </div>
 
         <!-- Table Body -->
@@ -124,6 +134,30 @@
             <div style="background-color: white; padding: 15px 20px;">
                 {{ $anggota->links() }}
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Import -->
+<div id="modalImport" class="modal-bg" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:white;width:480px;max-width:90%;padding:28px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);">
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:700;color:#1f2937;">Import Data Anggota</h3>
+        <p style="font-size:13px;color:#6b7280;margin:0 0 16px;">
+            Upload file Excel (.xlsx) untuk mengimport data anggota secara massal.
+            <br><a href="{{ route('sekretaris.anggota.template') }}" style="color:var(--primary-500);font-weight:500;">Download template</a> terlebih dahulu jika belum punya.
+        </p>
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Pilih File Excel</label>
+            <div class="file-upload" onclick="this.querySelector('input').click();" style="width:100%;padding:12px 16px;border:1px dashed #d1d5db;border-radius:8px;text-align:center;cursor:pointer;box-sizing:border-box;">
+                <input type="file" id="importFile" accept=".xlsx,.xls,.ods" required onchange="document.getElementById('importFilePlaceholder').textContent = this.files[0].name;" style="display:none;">
+                <span id="importFilePlaceholder" style="font-size:13px;color:#9ca3af;">Upload here...</span>
+                <span class="material-icons" style="font-size:18px;vertical-align:middle;color:#6b7280;margin-left:6px;">cloud_upload</span>
+            </div>
+        </div>
+        <div id="importResult" style="display:none;padding:12px;border-radius:8px;background:#f9fafb;margin-bottom:16px;font-size:13px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;">
+            <button onclick="closeModalImport()" style="padding:8px 20px;background:#374151;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Tutup</button>
+            <button id="btnImport" onclick="importAnggota()" style="padding:8px 20px;background:var(--primary-500);color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Import</button>
         </div>
     </div>
 </div>
@@ -387,6 +421,73 @@
     document.getElementById('modalEdit').addEventListener('click', function(e) {
         if (e.target === this) closeEditModal();
     });
+
+    /* ── Import ── */
+    function openModalImport() {
+        document.getElementById('modalImport').style.display = 'flex';
+        document.getElementById('importFile').value = '';
+        document.getElementById('importFilePlaceholder').textContent = 'Upload here...';
+        document.getElementById('importResult').style.display = 'none';
+        document.getElementById('btnImport').disabled = false;
+        document.getElementById('btnImport').innerHTML = 'Import';
+    }
+
+    function closeModalImport() {
+        document.getElementById('modalImport').style.display = 'none';
+    }
+
+    document.getElementById('modalImport').addEventListener('click', function(e) {
+        if (e.target === this) closeModalImport();
+    });
+
+    function importAnggota() {
+        var btn = document.getElementById('btnImport');
+        var fileInput = document.getElementById('importFile');
+        if (!fileInput.files[0]) { alert('Harap pilih file Excel terlebih dahulu.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-spinner"></span> Mengimport...';
+
+        var formData = new FormData();
+        formData.append('file_import', fileInput.files[0]);
+
+        fetchAPI('{{ route('sekretaris.anggota.import') }}', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+            body: formData
+        })
+        .then(function(res) {
+            var resultDiv = document.getElementById('importResult');
+            resultDiv.style.display = 'block';
+
+            if (res.errors && res.errors.length > 0) {
+                var list = '<ul style="margin:8px 0 0 16px;font-size:12px;color:#dc2626;text-align:left;">';
+                for (var i = 0; i < Math.min(res.errors.length, 10); i++) {
+                    list += '<li>' + res.errors[i] + '</li>';
+                }
+                if (res.errors.length > 10) {
+                    list += '<li>...dan ' + (res.errors.length - 10) + ' error lainnya</li>';
+                }
+                list += '</ul>';
+                resultDiv.innerHTML = '<div style="color:' + (res.berhasil > 0 ? '#059669' : '#dc2626') + ';font-weight:600;">' + res.message + '</div>' + list;
+            } else {
+                resultDiv.innerHTML = '<div style="color:#059669;font-weight:600;">' + res.message + '</div>';
+            }
+
+            if (res.berhasil > 0) {
+                setTimeout(function() { location.reload(); }, 2000);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = 'Import';
+        })
+        .catch(function(e) {
+            btn.disabled = false;
+            btn.innerHTML = 'Import';
+            document.getElementById('importResult').style.display = 'block';
+            document.getElementById('importResult').innerHTML = '<div style="color:#dc2626;font-weight:600;">Gagal: ' + e.message + '</div>';
+        });
+    }
 </script>
 @endpush
 @endsection

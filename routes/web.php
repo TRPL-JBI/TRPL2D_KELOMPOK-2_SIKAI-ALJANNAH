@@ -66,6 +66,8 @@ Route::middleware(['auth', 'role:sekretaris,superadmin'])->group(function () {
     Route::post('/sekretaris/{id}/verifikasi', [SekretarisController::class, 'verifikasi'])->name('sekretaris.verifikasi');
 
     Route::get('/sekretaris/anggota', [SekretarisController::class, 'anggota'])->name('sekretaris.anggota');
+    Route::post('/sekretaris/anggota/import', [SekretarisController::class, 'importAnggota'])->name('sekretaris.anggota.import');
+    Route::get('/sekretaris/anggota/template', [SekretarisController::class, 'downloadTemplateAnggota'])->name('sekretaris.anggota.template');
 
     Route::get('/sekretaris/log', [SekretarisController::class, 'log'])->name('sekretaris.log');
 
@@ -139,6 +141,8 @@ Route::middleware(['auth', 'role:bendahara,superadmin'])->group(function () {
 
     Route::get('/bendahara/catat-transaksi', [BendaharaController::class, 'catatTransaksi'])->name('bendahara.catat-transaksi');
     Route::post('/bendahara/catat-transaksi', [BendaharaController::class, 'storeTransaksi'])->name('bendahara.catat-transaksi.store');
+    Route::post('/bendahara/catat-transaksi/import', [BendaharaController::class, 'importTransaksi'])->name('bendahara.catat-transaksi.import');
+    Route::get('/bendahara/catat-transaksi/template', [BendaharaController::class, 'downloadTemplateTransaksi'])->name('bendahara.catat-transaksi.template');
 
     Route::post('/bendahara/iuran/generate-access-code', [BendaharaController::class, 'generateAccessCode'])->name('bendahara.iuran.generate-access-code');
 });

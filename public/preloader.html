@@ -52,18 +52,14 @@ body {
     xhr.open('GET', targetUrl, true);
     xhr.timeout = 60000;
     xhr.onload = function() {
-        if (xhr.status >= 200 && xhr.status < 400) {
-            var ct = (xhr.getResponseHeader('Content-Type') || '').toLowerCase();
-            if (ct.indexOf('text/html') === -1) {
-                location.reload();
-                return;
-            }
+        var ct = (xhr.getResponseHeader('Content-Type') || '').toLowerCase();
+        if (ct.indexOf('text/html') !== -1) {
             try { sessionStorage.setItem('preloader_hydrated', '1'); } catch(e) {}
             document.open();
             document.write(xhr.responseText);
             document.close();
         } else {
-            showError();
+            location.reload();
         }
     };
     xhr.onerror = showError;
