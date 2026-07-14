@@ -208,14 +208,37 @@
     }
 
     function openModalImport() {
+        document.getElementById('modalImportResult').classList.remove('active');
         document.getElementById('modalImport').classList.add('active');
         document.getElementById('importFile').value = '';
         document.getElementById('importFilePlaceholder').textContent = 'Upload here...';
-        document.getElementById('importResult').style.display = 'none';
     }
 
     function closeModalImport() {
         document.getElementById('modalImport').classList.remove('active');
+    }
+
+    function closeModalImportResult() {
+        document.getElementById('modalImportResult').classList.remove('active');
+        location.reload();
+    }
+
+    function showImportResult(res) {
+        var content = document.getElementById('importResultContent');
+        if (res.errors && res.errors.length > 0) {
+            var list = '<ul style="margin:8px 0 0 16px;font-size:12px;color:#dc2626;text-align:left;">';
+            for (var i = 0; i < Math.min(res.errors.length, 10); i++) {
+                list += '<li>' + res.errors[i] + '</li>';
+            }
+            if (res.errors.length > 10) {
+                list += '<li>...dan ' + (res.errors.length - 10) + ' error lainnya</li>';
+            }
+            list += '</ul>';
+            content.innerHTML = '<div style="color:' + (res.berhasil > 0 ? '#059669' : '#dc2626') + ';font-weight:600;margin-bottom:8px;">' + res.message + '</div>' + list;
+        } else {
+            content.innerHTML = '<div style="color:#059669;font-weight:600;">' + res.message + '</div>';
+        }
+        document.getElementById('modalImportResult').classList.add('active');
     }
 
     function importTransaksi() {
@@ -235,35 +258,17 @@
             body: formData
         })
         .then(function(res) {
-            var resultDiv = document.getElementById('importResult');
-            resultDiv.style.display = 'block';
-
-            if (res.errors && res.errors.length > 0) {
-                var list = '<ul style="margin:8px 0 0 16px;font-size:12px;color:#dc2626;text-align:left;">';
-                for (var i = 0; i < Math.min(res.errors.length, 10); i++) {
-                    list += '<li>' + res.errors[i] + '</li>';
-                }
-                if (res.errors.length > 10) {
-                    list += '<li>...dan ' + (res.errors.length - 10) + ' error lainnya</li>';
-                }
-                list += '</ul>';
-                resultDiv.innerHTML = '<div style="color:' + (res.berhasil > 0 ? '#059669' : '#dc2626') + ';font-weight:600;">' + res.message + '</div>' + list;
-            } else {
-                resultDiv.innerHTML = '<div style="color:#059669;font-weight:600;">' + res.message + '</div>';
-            }
-
-            if (res.berhasil > 0) {
-                setTimeout(function() { location.reload(); }, 2000);
-            }
-
+            closeModalImport();
+            showImportResult(res);
             btn.disabled = false;
             btn.innerHTML = 'Import';
         })
         .catch(function(e) {
             btn.disabled = false;
             btn.innerHTML = 'Import';
-            document.getElementById('importResult').style.display = 'block';
-            document.getElementById('importResult').innerHTML = '<div style="color:#dc2626;font-weight:600;">Gagal: ' + e.message + '</div>';
+            var content = document.getElementById('importResultContent');
+            content.innerHTML = '<div style="color:#dc2626;font-weight:600;">Gagal: ' + e.message + '</div>';
+            document.getElementById('modalImportResult').classList.add('active');
         });
     }
 </script>
@@ -390,10 +395,23 @@
                 </div>
             </div>
         </div>
-        <div id="importResult" style="display:none;padding:12px;border-radius:8px;background:#f9fafb;margin-bottom:16px;font-size:13px;"></div>
         <div class="modal-actions">
             <button class="btn-batal" onclick="closeModalImport()">Tutup</button>
             <button class="btn-minta" data-loading onclick="importTransaksi()">Import</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalImportResult" class="modal-overlay">
+    <div class="modal-bg"></div>
+    <div class="modal-box" style="max-width:520px;max-height:80vh;overflow-y:auto;">
+        <div class="modal-icon">
+            <span class="material-icons">assignment</span>
+        </div>
+        <h3>Hasil Import Transaksi & Iuran</h3>
+        <div id="importResultContent" style="font-size:13px;line-height:1.6;text-align:left;"></div>
+        <div class="modal-actions" style="margin-top:16px;">
+            <button class="btn-batal" onclick="closeModalImportResult()">Tutup</button>
         </div>
     </div>
 </div>

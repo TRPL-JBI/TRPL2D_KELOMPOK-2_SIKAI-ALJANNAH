@@ -745,9 +745,15 @@ class BendaharaController extends Controller
     {
         $search = $request->input('search', '');
         $period = $request->input('period', 'semua');
+        $year = $request->input('year', date('Y'));
+        $page = (int) $request->input('page', 1);
+        $perPage = 10;
 
         $pemasukanQuery = Pemasukan::with('kategoriPemasukan');
         $pengeluaranQuery = Pengeluaran::with('kategoriPengeluaran');
+
+        $pemasukanQuery->whereYear('created_at', $year);
+        $pengeluaranQuery->whereYear('created_at', $year);
 
         if ($period === 'hari') {
             $pemasukanQuery->whereDate('created_at', today());
@@ -756,10 +762,8 @@ class BendaharaController extends Controller
             $pemasukanQuery->whereDate('created_at', '>=', today()->subDays(7));
             $pengeluaranQuery->whereDate('created_at', '>=', today()->subDays(7));
         } elseif ($period === 'bulan') {
-            $pemasukanQuery->whereRaw("strftime('%m', created_at) = ?", [today()->format('m')])
-                ->whereRaw("strftime('%Y', created_at) = ?", [today()->format('Y')]);
-            $pengeluaranQuery->whereRaw("strftime('%m', created_at) = ?", [today()->format('m')])
-                ->whereRaw("strftime('%Y', created_at) = ?", [today()->format('Y')]);
+            $pemasukanQuery->whereMonth('created_at', today()->format('m'));
+            $pengeluaranQuery->whereMonth('created_at', today()->format('m'));
         }
 
         $pemasukan = $pemasukanQuery->get();
@@ -790,25 +794,47 @@ class BendaharaController extends Controller
 
         $totalPemasukan = $transaksi->where('type', 'masuk')->sum('nominal');
         $totalPengeluaran = $transaksi->where('type', 'keluar')->sum('nominal');
+        $totalData = $transaksi->count();
+        $lastPage = max(1, (int) ceil($totalData / $perPage));
+        $currentPage = min(max(1, $page), $lastPage);
+
+        $paged = $transaksi->forPage($currentPage, $perPage)->values();
 
         return response()->json([
             'totalPemasukan' => $totalPemasukan,
             'totalPengeluaran' => $totalPengeluaran,
             'saldo' => $totalPemasukan - $totalPengeluaran,
-            'transaksi' => $transaksi->map(fn($t) => [
+            'transaksi' => $paged->map(fn($t) => [
                 'tanggal' => $t['tanggal'],
                 'kategori' => $t['kategori'],
                 'nominal' => ($t['type'] === 'masuk' ? '+ ' : '- ') . number_format($t['nominal'], 0, ',', '.'),
                 'type' => $t['type'],
             ]),
-            'totalData' => $transaksi->where('type', 'keluar')->count(),
+            'totalData' => $totalData,
+            'currentPage' => $currentPage,
+            'lastPage' => $lastPage,
+            'perPage' => $perPage,
         ]);
     }
 
-    public function exportLaporan()
+    public function exportLaporan(Request $request)
     {
-        $pemasukan = Pemasukan::with('kategoriPemasukan')->get();
-        $pengeluaran = Pengeluaran::with('kategoriPengeluaran')->get();
+        $year = $request->input('year', date('Y'));
+        $month = $request->input('month', '');
+
+        $pemasukanQuery = Pemasukan::with('kategoriPemasukan');
+        $pengeluaranQuery = Pengeluaran::with('kategoriPengeluaran');
+
+        $pemasukanQuery->whereYear('created_at', $year);
+        $pengeluaranQuery->whereYear('created_at', $year);
+
+        if ($month) {
+            $pemasukanQuery->whereMonth('created_at', $month);
+            $pengeluaranQuery->whereMonth('created_at', $month);
+        }
+
+        $pemasukan = $pemasukanQuery->get();
+        $pengeluaran = $pengeluaranQuery->get();
 
         $transaksi = collect()
             ->merge($pemasukan->map(fn($p) => [
@@ -829,9 +855,17 @@ class BendaharaController extends Controller
         $totalPemasukan = $transaksi->where('type', 'masuk')->sum('nominal');
         $totalPengeluaran = $transaksi->where('type', 'keluar')->sum('nominal');
 
-        $writer = new Writer();
-        $writer->openToBrowser('Laporan-Keuangan.xlsx');
+        $label = $month
+            ? date('F', mktime(0, 0, 0, (int) $month, 1)) . " $year"
+            : (string) $year;
+        $filename = $month
+            ? "Laporan-Keuangan-$year-" . str_pad($month, 2, '0', STR_PAD_LEFT) . ".xlsx"
+            : "Laporan-Keuangan-$year.xlsx";
 
+        $writer = new Writer();
+        $writer->openToBrowser($filename);
+
+        $writer->addRow(Row::fromValues(['Laporan Keuangan', $label, '', '']));
         $writer->addRow(Row::fromValues(['Tanggal', 'Kategori', 'Nominal', 'Status']));
 
         foreach ($transaksi as $t) {
@@ -1005,7 +1039,9 @@ class BendaharaController extends Controller
                         if ($tipe === 'pemasukan') {
                             $kategoriId = $kategoriPemasukanMap[$kategoriNama] ?? null;
                             if (!$kategoriId) {
-                                throw new \Exception("Baris $idx: kategori pemasukan \"$kategoriNama\" tidak ditemukan.");
+                                $kategori = KategoriPemasukan::create(['nama' => $kategoriNama]);
+                                $kategoriId = $kategori->id;
+                                $kategoriPemasukanMap[$kategoriNama] = $kategoriId;
                             }
 
                             Pemasukan::create([
@@ -1018,7 +1054,9 @@ class BendaharaController extends Controller
                         } else {
                             $kategoriId = $kategoriPengeluaranMap[$kategoriNama] ?? null;
                             if (!$kategoriId) {
-                                throw new \Exception("Baris $idx: kategori pengeluaran \"$kategoriNama\" tidak ditemukan.");
+                                $kategori = KategoriPengeluaran::create(['nama' => $kategoriNama]);
+                                $kategoriId = $kategori->id;
+                                $kategoriPengeluaranMap[$kategoriNama] = $kategoriId;
                             }
 
                             Pengeluaran::create([

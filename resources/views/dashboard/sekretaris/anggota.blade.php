@@ -154,10 +154,20 @@
                 <span class="material-icons" style="font-size:18px;vertical-align:middle;color:#6b7280;margin-left:6px;">cloud_upload</span>
             </div>
         </div>
-        <div id="importResult" style="display:none;padding:12px;border-radius:8px;background:#f9fafb;margin-bottom:16px;font-size:13px;"></div>
         <div style="display:flex;justify-content:flex-end;gap:10px;">
             <button onclick="closeModalImport()" style="padding:8px 20px;background:#374151;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Tutup</button>
             <button id="btnImport" onclick="importAnggota()" style="padding:8px 20px;background:var(--primary-500);color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Import</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Hasil Import -->
+<div id="modalImportResult" class="modal-bg" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1100;align-items:center;justify-content:center;">
+    <div style="background:white;width:520px;max-width:90%;padding:28px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);max-height:80vh;overflow-y:auto;">
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:700;color:#1f2937;">Hasil Import Anggota</h3>
+        <div id="importResultContent" style="font-size:13px;line-height:1.6;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+            <button onclick="closeModalImportResult()" style="padding:8px 20px;background:#374151;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Tutup</button>
         </div>
     </div>
 </div>
@@ -424,10 +434,10 @@
 
     /* ── Import ── */
     function openModalImport() {
+        document.getElementById('modalImportResult').style.display = 'none';
         document.getElementById('modalImport').style.display = 'flex';
         document.getElementById('importFile').value = '';
         document.getElementById('importFilePlaceholder').textContent = 'Upload here...';
-        document.getElementById('importResult').style.display = 'none';
         document.getElementById('btnImport').disabled = false;
         document.getElementById('btnImport').innerHTML = 'Import';
     }
@@ -439,6 +449,33 @@
     document.getElementById('modalImport').addEventListener('click', function(e) {
         if (e.target === this) closeModalImport();
     });
+
+    function closeModalImportResult() {
+        document.getElementById('modalImportResult').style.display = 'none';
+        location.reload();
+    }
+
+    document.getElementById('modalImportResult').addEventListener('click', function(e) {
+        if (e.target === this) closeModalImportResult();
+    });
+
+    function showImportResult(res) {
+        var content = document.getElementById('importResultContent');
+        if (res.errors && res.errors.length > 0) {
+            var list = '<ul style="margin:8px 0 0 16px;font-size:12px;color:#dc2626;text-align:left;">';
+            for (var i = 0; i < Math.min(res.errors.length, 10); i++) {
+                list += '<li>' + res.errors[i] + '</li>';
+            }
+            if (res.errors.length > 10) {
+                list += '<li>...dan ' + (res.errors.length - 10) + ' error lainnya</li>';
+            }
+            list += '</ul>';
+            content.innerHTML = '<div style="color:' + (res.berhasil > 0 ? '#059669' : '#dc2626') + ';font-weight:600;margin-bottom:8px;">' + res.message + '</div>' + list;
+        } else {
+            content.innerHTML = '<div style="color:#059669;font-weight:600;">' + res.message + '</div>';
+        }
+        document.getElementById('modalImportResult').style.display = 'flex';
+    }
 
     function importAnggota() {
         var btn = document.getElementById('btnImport');
@@ -457,35 +494,17 @@
             body: formData
         })
         .then(function(res) {
-            var resultDiv = document.getElementById('importResult');
-            resultDiv.style.display = 'block';
-
-            if (res.errors && res.errors.length > 0) {
-                var list = '<ul style="margin:8px 0 0 16px;font-size:12px;color:#dc2626;text-align:left;">';
-                for (var i = 0; i < Math.min(res.errors.length, 10); i++) {
-                    list += '<li>' + res.errors[i] + '</li>';
-                }
-                if (res.errors.length > 10) {
-                    list += '<li>...dan ' + (res.errors.length - 10) + ' error lainnya</li>';
-                }
-                list += '</ul>';
-                resultDiv.innerHTML = '<div style="color:' + (res.berhasil > 0 ? '#059669' : '#dc2626') + ';font-weight:600;">' + res.message + '</div>' + list;
-            } else {
-                resultDiv.innerHTML = '<div style="color:#059669;font-weight:600;">' + res.message + '</div>';
-            }
-
-            if (res.berhasil > 0) {
-                setTimeout(function() { location.reload(); }, 2000);
-            }
-
+            closeModalImport();
+            showImportResult(res);
             btn.disabled = false;
             btn.innerHTML = 'Import';
         })
         .catch(function(e) {
             btn.disabled = false;
             btn.innerHTML = 'Import';
-            document.getElementById('importResult').style.display = 'block';
-            document.getElementById('importResult').innerHTML = '<div style="color:#dc2626;font-weight:600;">Gagal: ' + e.message + '</div>';
+            var content = document.getElementById('importResultContent');
+            content.innerHTML = '<div style="color:#dc2626;font-weight:600;">Gagal: ' + e.message + '</div>';
+            document.getElementById('modalImportResult').style.display = 'flex';
         });
     }
 </script>

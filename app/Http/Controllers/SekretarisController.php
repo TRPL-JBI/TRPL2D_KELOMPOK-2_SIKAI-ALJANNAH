@@ -252,60 +252,66 @@ class SekretarisController extends Controller
 
         $writer->addRow(Row::fromValues([
             'PETUNJUK: Isi setiap kolom sesuai petunjuk di bawah. Hapus baris contoh sebelum import.',
-            '', '', '', '', '',
-        ]));
-
-        $writer->addRow(Row::fromValues([
-            'nomor_anggota', 'nama', 'email', 'telepon', 'alamat', 'status',
-        ]));
-
-        $writer->addRow(Row::fromValues([
-            '(auto)', 'Contoh Nama', 'contoh@email.com', '08123456789', 'Alamat lengkap', 'aktif',
-        ]));
-
-        $writer->addRow(Row::fromValues([
             '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
+            'nomor_anggota', 'nama', 'email', 'telepon', 'alamat', 'status', 'nama_tertanggung',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            '(auto)', 'Contoh Nama', 'contoh@email.com', '08123456789', 'Alamat lengkap', 'aktif', 'Contoh Istri, Contoh Anak',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
             'KETERANGAN KOLOM:',
-            '', '', '', '', '',
+            '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'nomor_anggota',
             'Opsional. Format RKM-XXXXX. Kosongkan untuk diisi otomatis.',
-            '', '', '', '',
+            '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'nama',
             'Wajib. Nama lengkap anggota.',
-            '', '', '', '',
+            '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'email',
             'Wajib. Alamat email (harus unik).',
-            '', '', '', '',
+            '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'telepon',
             'Wajib. Nomor telepon.',
-            '', '', '', '',
+            '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'alamat',
             'Wajib. Alamat lengkap anggota.',
-            '', '', '', '',
+            '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'status',
             'Opsional. "aktif" atau "non_aktif". Default: aktif.',
-            '', '', '', '',
+            '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'nama_tertanggung',
+            'Opsional. Nama anggota keluarga yang ditanggung. Pisahkan dengan koma (,) jika lebih dari satu.',
+            '', '', '', '', '',
         ]));
 
         $writer->close();
@@ -340,6 +346,7 @@ class SekretarisController extends Controller
                 $telepon = trim((string) ($cells[3] ?? ''));
                 $alamat = trim((string) ($cells[4] ?? ''));
                 $status = trim((string) ($cells[5] ?? ''));
+                $namaTertanggung = trim((string) ($cells[6] ?? ''));
 
                 if (empty($nama) && empty($email)) continue;
 
@@ -373,7 +380,7 @@ class SekretarisController extends Controller
                         }
                     }
 
-                    Anggota::create([
+                    $anggota = Anggota::create([
                         'nomor_anggota' => $nomorAnggota,
                         'nama' => $nama,
                         'email' => $email,
@@ -382,6 +389,31 @@ class SekretarisController extends Controller
                         'status' => $status,
                         'created_by' => Auth::id(),
                     ]);
+
+                    $calon = CalonAnggota::create([
+                        'nama' => $nama,
+                        'email' => $email,
+                        'telepon' => $telepon,
+                        'alamat' => $alamat,
+                        'status' => 'disetujui',
+                        'anggota_id' => $anggota->id,
+                    ]);
+
+                    $anggota->update(['calon_anggota_id' => $calon->id]);
+
+                    if (!empty($namaTertanggung)) {
+                        $namaList = array_map('trim', explode(',', $namaTertanggung));
+                        $namaList = array_filter($namaList);
+
+                        foreach ($namaList as $nm) {
+                            KeluargaAnggota::create([
+                                'calon_anggota_id' => $calon->id,
+                                'nama' => $nm,
+                                'jenis_kelamin' => 'laki-laki',
+                                'tanggal_lahir' => now()->toDateString(),
+                            ]);
+                        }
+                    }
 
                     LogAktivitas::create([
                         'user_id' => Auth::id(),
