@@ -263,10 +263,10 @@
                 <input type="text" name="search" placeholder="Cari halaman..." value="{{ request('search') }}" onchange="this.form.submit()">
             </form>
         </div>
-        <a href="#" class="btn-pages btn-pages-primary">
+        <button onclick="openCreateModal()" class="btn-pages btn-pages-primary" style="border:none;">
             <span class="material-icons" style="font-size:18px;">add</span>
             Buat Halaman Baru
-        </a>
+        </button>
     </div>
 </div>
 
@@ -300,10 +300,17 @@
                 </td>
                 <td>
                     <div class="pages-actions">
+                        @if($page->slug === 'beranda')
                         <a href="{{ route('adminweb.pages.edit', $page->id) }}" class="btn-action btn-action-edit">
                             <span class="material-icons" style="font-size:14px;">edit</span>
                             Edit
                         </a>
+                        @else
+                        <a href="{{ route('adminweb.pages.builder', $page->id) }}" class="btn-action btn-action-edit">
+                            <span class="material-icons" style="font-size:14px;">palette</span>
+                            Builder
+                        </a>
+                        @endif
                         <form method="POST" action="{{ route('adminweb.pages.destroy', $page->id) }}" style="display:inline;" onsubmit="return confirm('Hapus halaman ini?')">
                             @csrf
                             @method('DELETE')
@@ -352,6 +359,38 @@
 
 <div id="toastCopy" class="toast-copy">Link disalin!</div>
 
+{{-- ─── Create Page Modal ─── --}}
+<div class="modal-overlay" id="createModal">
+    <div class="modal-bg" onclick="closeCreateModal()"></div>
+    <div class="modal" style="max-width:480px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Buat Halaman Baru</h3>
+            <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+        </div>
+        <form method="POST" action="{{ route('adminweb.pages.store') }}" style="margin:0;">
+            @csrf
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label class="form-label">Nama Halaman</label>
+                    <input type="text" class="form-input" id="createTitle" name="title" required placeholder="Mis: Tentang Kami">
+                </div>
+                <div class="form-group" style="margin-bottom:8px;">
+                    <label class="form-label">Slug</label>
+                    <input type="text" class="form-input" id="createSlug" name="slug" required placeholder="tentang-kami">
+                    <p style="font-size:11px;color:var(--primary-400);margin-top:6px;">Slug akan terisi otomatis dari nama halaman. Bisa diubah manual.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateModal()" style="padding:10px 24px;font-size:13px;">Batal</button>
+                <button type="submit" class="btn btn-primary" style="padding:10px 24px;font-size:13px;">
+                    <span class="material-icons" style="font-size:16px;">arrow_forward</span>
+                    Lanjut ke Builder
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @if(session('success'))
 <div style="position:fixed;top:20px;right:20px;z-index:9999;background-color:#d8efdd;border:1px solid #35ab50;border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:center;gap:0.75rem;font-family:'Segoe UI',sans-serif;font-size:0.95rem;color:#154420;box-shadow:0 4px 15px rgba(0,0,0,0.1);">
     <span class="material-icons" style="color:#35ab50;font-size:20px;">check_circle</span>
@@ -363,6 +402,19 @@
 @endif
 
 <script>
+    // ── Create Page Modal ──
+    function openCreateModal() {
+        document.getElementById('createModal').classList.add('active');
+        document.getElementById('createTitle').focus();
+    }
+    function closeCreateModal() {
+        document.getElementById('createModal').classList.remove('active');
+    }
+    document.getElementById('createTitle')?.addEventListener('input', function() {
+        var slug = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        document.getElementById('createSlug').value = slug;
+    });
+
     function copyPageLink(path, btn) {
         var url = window.location.origin + path;
         if (navigator.clipboard && navigator.clipboard.writeText) {

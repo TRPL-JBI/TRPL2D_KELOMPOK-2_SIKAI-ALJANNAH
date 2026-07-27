@@ -169,6 +169,9 @@ Route::middleware(['auth', 'role:adminweb'])->group(function () {
     Route::post('/adminweb/kategori', [AdminWebController::class, 'storeCategory'])->name('adminweb.kategori.store');
 
     Route::get('/adminweb/pages', [AdminWebController::class, 'pages'])->name('adminweb.pages');
+    Route::post('/adminweb/pages/buat', [AdminWebController::class, 'storePage'])->name('adminweb.pages.store');
+    Route::get('/adminweb/pages/{id}/builder', [AdminWebController::class, 'builderPage'])->name('adminweb.pages.builder');
+    Route::post('/adminweb/pages/{id}/builder/save', [AdminWebController::class, 'saveBuilder'])->name('adminweb.pages.builder.save');
     Route::get('/adminweb/pages/{id}/edit', [AdminWebController::class, 'editPage'])->name('adminweb.pages.edit');
     Route::put('/adminweb/pages/{id}', [AdminWebController::class, 'updatePage'])->name('adminweb.pages.update');
     Route::put('/adminweb/pages/{id}/publish', [AdminWebController::class, 'publishPage'])->name('adminweb.pages.publish');

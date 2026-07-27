@@ -106,7 +106,7 @@ class AdminWebController extends Controller
             return view('dashboard.adminweb.page-edit-beranda', compact('page', 'data'));
         }
 
-        return view('dashboard.adminweb.page-edit', compact('page'));
+        return redirect()->route('adminweb.pages.builder', $id);
     }
 
     public function updatePage(Request $request, $id)
@@ -188,6 +188,60 @@ class AdminWebController extends Controller
         });
 
         return $data;
+    }
+
+    public function storePage(Request $request)
+    {
+        $data = $request->validate([
+            'title' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|unique:pages,slug',
+        ]);
+
+        $page = Page::create([
+            'title' => $data['title'],
+            'slug' => $data['slug'],
+            'content' => '',
+            'status' => 'draft',
+        ]);
+
+        return redirect()->route('adminweb.pages.builder', $page->id)
+            ->with('success', 'Halaman "' . e($page->title) . '" berhasil dibuat.');
+    }
+
+    public function builderPage($id)
+    {
+        $page = Page::findOrFail($id);
+
+        if ($page->slug === 'beranda') {
+            return redirect()->route('adminweb.pages.edit', $id);
+        }
+
+        $pageState = [];
+        $content = $page->content;
+        if ($content && $content !== '') {
+            $decoded = json_decode($content, true);
+            if (is_array($decoded) && isset($decoded[0]) && isset($decoded[0]['type'])) {
+                $pageState = $decoded;
+            }
+        }
+
+        return view('dashboard.adminweb.page-builder', compact('page', 'pageState'));
+    }
+
+    public function saveBuilder(Request $request, $id)
+    {
+        $page = Page::findOrFail($id);
+
+        $pageState = $request->input('pageState', []);
+        if (!is_array($pageState)) {
+            return response()->json(['success' => false, 'message' => 'Data tidak valid.'], 422);
+        }
+
+        $page->update([
+            'content' => json_encode($pageState, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Halaman berhasil disimpan.']);
     }
 
     public function pages(Request $request)
