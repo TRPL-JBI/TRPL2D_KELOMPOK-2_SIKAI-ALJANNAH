@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $page->title }} - RKM Al-Jannah</title>
+    @include('components.favicon')
 
     <!-- Google Fonts: Space Grotesk & Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +27,6 @@
         footer { background: #16423c; color: #c5d5c0; text-align: center; padding: 1.5rem; font-size: 0.875rem; }
         {{-- Builder content styles --}}
         .builder-content { max-width: 1180px; margin: 0 auto; background: #ffffff; padding: 20px; }
-        .builder-content h2 { font-family: 'Space Grotesk', sans-serif; margin-bottom: 0.75rem; }
         .builder-content p { margin-bottom: 1rem; }
         .builder-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 1rem 0; }
         .builder-content a { color: #16423c; font-weight: 600; }
@@ -39,17 +39,19 @@
     @include('components.preloader')
     <x-navbar />
     <section class="page-section">
+        @if($page->isBuilderContent())
+        <div class="builder-content">
+            {!! $page->renderContent() !!}
+        </div>
+        @else
         <div class="page-container">
             <h1 class="page-title">{{ $page->title }}</h1>
             <hr class="page-divider">
-            <div class="{{ $page->isBuilderContent() ? 'builder-content' : 'page-content' }}">
-                @if($page->isBuilderContent())
-                    {!! $page->renderContent() !!}
-                @else
-                    {!! str($page->content)->sanitizeHtml() !!}
-                @endif
+            <div class="page-content">
+                {!! str($page->content)->sanitizeHtml() !!}
             </div>
         </div>
+        @endif
     </section>
     <footer>
         &copy; {{ date('Y') }} RKM Al-Jannah. All rights reserved.

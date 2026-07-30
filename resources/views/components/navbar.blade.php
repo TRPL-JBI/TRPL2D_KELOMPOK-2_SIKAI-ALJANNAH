@@ -57,6 +57,9 @@
             <!-- Default Static Menus (Fallback) -->
             <ul class="nav-menu" id="navMenu">
                 <li>
+                    <a href="#tentang-kami" class="nav-link scroll-link">Tentang Kami</a>
+                </li>
+                <li>
                     <a href="#visi-misi" class="nav-link scroll-link">Visi & Misi</a>
                 </li>
                 <li>

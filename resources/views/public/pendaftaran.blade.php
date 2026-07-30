@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pendaftaran Anggota Baru - RKM Al-Jannah</title>
+    @include('components.favicon')
     
     <!-- Google Fonts: Space Grotesk & Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

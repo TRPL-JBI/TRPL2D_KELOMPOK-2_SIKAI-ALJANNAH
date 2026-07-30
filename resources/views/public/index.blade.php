@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'Laravel') }}</title>
+    @include('components.favicon')
     
     <!-- Google Fonts: Space Grotesk (Navbar) & Poppins (Content) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1138,7 +1139,7 @@
     </section>
 
     <!-- About Section (Apa itu RKM Al-Jannah) -->
-    <section class="about-section" id="visi-misi">
+    <section class="about-section" id="tentang-kami">
         <div class="about-container">
             <div class="about-box">
                 <h2 class="about-title">{{ $content['about']['title'] ?? 'Apa itu RKM AL JANNAH ?' }}</h2>
@@ -1153,7 +1154,7 @@
     </section>
 
     <!-- Vision & Mission Section -->
-    <section class="vision-mission-section">
+    <section class="vision-mission-section" id="visi-misi">
         <div class="vision-mission-container">
             <!-- Visi Box -->
             <article class="vm-box">
@@ -1268,7 +1269,7 @@
     </section>
 
     <!-- Member Benefits Section (Keuntungan Anggota) -->
-    <section class="member-benefits-section">
+    <section class="member-benefits-section" id="keuntungan-anggota">
         <div class="member-benefits-container">
             @php $memberBenefits = $content['member_benefits'] ?? []; @endphp
             <h2 class="member-benefits-title">{{ $memberBenefits['title'] ?? 'Keuntungan Anggota' }}</h2>

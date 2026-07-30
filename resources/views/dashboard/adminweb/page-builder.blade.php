@@ -157,12 +157,6 @@ input,select,textarea{font-family:inherit;}
   display:none;white-space:nowrap;z-index:6;letter-spacing:0.3px;
 }
 .el-block.selected .el-tag,.el-block:hover .el-tag{display:block;}
-.row-block{display:flex;gap:16px;padding:20px;min-height:60px;}
-.col-block{flex:1;min-height:50px;position:relative;border:1px dashed rgba(0,0,0,0.12);border-radius:4px;padding:6px;}
-.col-block.empty-col::before{
-  content:'kolom kosong — tarik komponen ke sini';font-size:11px;color:var(--text-dimmer);
-  display:flex;align-items:center;justify-content:center;min-height:40px;
-}
 [contenteditable]:focus{outline:2px solid var(--accent);outline-offset:2px;}
 
 /* ===== RIGHT PANEL: PROPERTIES ===== */
@@ -321,14 +315,6 @@ select.prop-input{appearance:none;}
       <div class="panel-section" id="tab-widgets">
         <div class="panel-section-title">Layout</div>
         <div class="widget-grid">
-          <div class="widget-item" draggable="true" data-type="row2">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="7" height="14" rx="1"/><rect x="14" y="5" width="7" height="14" rx="1"/></svg>
-            2 Kolom
-          </div>
-          <div class="widget-item" draggable="true" data-type="row3">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="5" width="5.5" height="14" rx="1"/><rect x="9.5" y="5" width="5" height="14" rx="1"/><rect x="16" y="5" width="5.5" height="14" rx="1"/></svg>
-            3 Kolom
-          </div>
           <div class="widget-item" draggable="true" data-type="container">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
             Kontainer
@@ -449,8 +435,6 @@ select.prop-input{appearance:none;}
 
   function makeNode(type){
     const node = { id: uid(), type, props: defaultProps(type), children: [] };
-    if(type === 'row2'){ node.type='row'; node.children=[makeNode('container'), makeNode('container')]; }
-    if(type === 'row3'){ node.type='row'; node.children=[makeNode('container'), makeNode('container'), makeNode('container')]; }
     return node;
   }
 
@@ -568,20 +552,6 @@ select.prop-input{appearance:none;}
 
     let inner;
     switch(node.type){
-      case 'row':
-        inner = document.createElement('div');
-        inner.className = 'row-block';
-        inner.style.padding = (p.padding||'12')+'px';
-        node.children.forEach(child=>{
-          const col = document.createElement('div');
-          col.className = 'col-block' + (child.children && child.children.length===0 ? ' empty-col':'');
-          col.dataset.dropzone = child.id;
-          const childEl = renderNode(child,false);
-          col.appendChild(childEl);
-          inner.appendChild(col);
-        });
-        wrap.appendChild(inner);
-        break;
       case 'container':
         inner = document.createElement('div');
         inner.dataset.dropzone = node.id;
@@ -876,7 +846,7 @@ select.prop-input{appearance:none;}
       html += field('Tautan (href)', '<input class="prop-input" id="p_href" value="'+escapeAttr(p.href)+'">');
     }
     if(node.type==='image'){
-      html += field('URL Gambar', '<input class="prop-input" id="p_src" value="'+escapeAttr(p.src)+'">');
+      html += field('URL Gambar', '<div style="display:flex;gap:6px;"><input class="prop-input" id="p_src" value="'+escapeAttr(p.src)+'" style="flex:1;"><button class="ghost-btn" id="p_upload" type="button" style="flex-shrink:0;height:32px;padding:0 10px;font-size:11px;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Upload</button></div>');
       html += field('Teks Alternatif (alt)', '<input class="prop-input" id="p_alt" value="'+escapeAttr(p.alt)+'">');
     }
     if(node.type==='list'){
@@ -910,7 +880,7 @@ select.prop-input{appearance:none;}
       html += field('Sudut Radius (px)', '<input type="range" min="0" max="40" class="prop-input" id="p_radius_range" value="'+(p.radius||0)+'" style="padding:0;">');
     }
 
-    if(['heading','text','button','image','divider','row','container'].includes(node.type)){
+    if(['heading','text','button','image','divider','container'].includes(node.type)){
       html += field('Padding (px)', '<div class="range-row"><input type="range" min="0" max="80" id="p_padding" value="'+(p.padding||0)+'">' +
         '<span class="range-val" id="p_padding_val">'+(p.padding||0)+'</span></div>');
     }
@@ -955,6 +925,44 @@ select.prop-input{appearance:none;}
     if(byId('p_href')) byId('p_href').addEventListener('change', e=> commit(()=> p.href = e.target.value));
     if(byId('p_src')) byId('p_src').addEventListener('change', e=> commit(()=> p.src = e.target.value));
     if(byId('p_alt')) byId('p_alt').addEventListener('change', e=> commit(()=> p.alt = e.target.value));
+    if(byId('p_upload')) byId('p_upload').addEventListener('click', function(){
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.addEventListener('change', function(){
+        var file = input.files[0];
+        if(!file) return;
+        var fd = new FormData();
+        fd.append('file', file);
+        var btn = byId('p_upload');
+        btn.disabled = true;
+        btn.textContent = 'Mengunggah...';
+        fetch('{{ route('editor.upload') }}', {
+          method: 'POST',
+          headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+          body: fd
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          if(res.success && res.file && res.file.url){
+            pushHistory();
+            p.src = res.file.url;
+            render();
+            showToast('Gambar berhasil diunggah');
+          } else {
+            showToast('Gagal mengunggah gambar');
+          }
+        })
+        .catch(function(err){
+          showToast('Gagal: ' + err.message);
+        })
+        .finally(function(){
+          btn.disabled = false;
+          btn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Upload';
+        });
+      });
+      input.click();
+    });
     if(byId('p_items')) byId('p_items').addEventListener('change', e=> commit(()=> p.items = e.target.value.split('\n').filter(Boolean)));
     if(byId('p_size')) byId('p_size').addEventListener('change', e=> commit(()=> p.size = e.target.value));
     if(byId('p_weight')) byId('p_weight').addEventListener('change', e=> commit(()=> p.weight = e.target.value));

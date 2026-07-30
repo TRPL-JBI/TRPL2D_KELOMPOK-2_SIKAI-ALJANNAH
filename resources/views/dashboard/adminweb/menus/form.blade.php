@@ -12,146 +12,118 @@
 
 @section('content')
 <style>
-    .menu-form-wrap {
-        max-width: 600px;
-        margin: 0 auto;
+    .page-menus-form .page-header {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
     }
-
-    .menu-form-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 24px;
-        flex-wrap: wrap;
-        gap: 12px;
+    .page-menus-form .page-header h1 {
+        font-size: 24px; font-weight: 700; color: var(--primary-500); margin: 0;
     }
-
-    .menu-form-title {
-        font-size: 24px;
-        font-weight: 700;
-        color: #16423c;
-    }
-
-    .menu-form-card {
-        background: #fff;
-        border: 1px solid #d4d4d4;
-        border-radius: 12px;
-        overflow: hidden;
-        margin-bottom: 20px;
-    }
-
-    .menu-form-card-body {
-        padding: 24px;
-    }
-
-    .menu-form-field {
-        margin-bottom: 20px;
-    }
-
-    .menu-form-field:last-child {
-        margin-bottom: 0;
-    }
-
-    .menu-form-field label {
-        display: block;
-        font-size: 13px;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 6px;
-    }
-
-    .menu-form-field input[type="text"],
-    .menu-form-field select {
-        width: 100%;
-        padding: 10px 14px;
-        border: 1.5px solid #e0e0e0;
-        border-radius: 8px;
-        font-family: 'Poppins', sans-serif;
-        font-size: 14px;
-        color: #1a1a1a;
-        background: #f8f9fa;
-        outline: none;
-        transition: border-color 0.2s;
-        box-sizing: border-box;
-    }
-
-    .menu-form-field input[type="text"]:focus,
-    .menu-form-field select:focus {
-        border-color: #16423c;
-    }
-
-    .menu-form-field .hint {
-        font-size: 11px;
-        color: #6b7280;
-        margin-top: 4px;
-    }
-
-    .menu-form-field .hint a {
-        color: #16423c;
-        text-decoration: underline;
-    }
-
-    .menu-form-field input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        accent-color: #16423c;
-        cursor: pointer;
-    }
-
-    .checkbox-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .menu-form-actions {
-        display: flex;
-        gap: 12px;
-        justify-content: flex-end;
-        margin-top: 24px;
-    }
-
-    .btn-menu-form {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 10px 28px;
-        border: none;
-        border-radius: 999px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        text-decoration: none;
+    .page-menus-form .page-header .btn-back {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: var(--primary-500); color: #fff; padding: 10px 22px;
+        border-radius: 100px; font-size: 13px; font-weight: 700;
+        text-decoration: none; transition: all .2s; border: none; cursor: pointer;
         font-family: inherit;
-        transition: opacity 0.2s;
+    }
+    .page-menus-form .page-header .btn-back:hover {
+        opacity: .9; box-shadow: 0 4px 14px rgba(22,66,60,0.3);
+    }
+    .page-menus-form .page-header .btn-back .material-icons { font-size: 18px; }
+    .page-menus-form .page-header .btn-back:active { transform: scale(.97); }
+
+    .page-menus-form .form-card {
+        background: #fff; border-radius: 28px; border: 2px solid var(--primary-500);
+        padding: 36px 40px; box-shadow: 0 4px 16px rgba(0,0,0,.05);
+        margin-bottom: 36px;
+    }
+    .page-menus-form .form-group { margin-bottom: 22px; }
+    .page-menus-form .form-group:last-child { margin-bottom: 0; }
+    .page-menus-form .form-group label {
+        display: block; font-size: 12px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .5px;
+        color: var(--primary-400); margin-bottom: 8px;
+    }
+    .page-menus-form .form-group .required-star { color: var(--danger-500); }
+    .page-menus-form .form-group input,
+    .page-menus-form .form-group select {
+        width: 100%; padding: 12px 16px;
+        border: 2px solid var(--primary-200); border-radius: 14px;
+        font: 14px 'Inter', sans-serif; color: #1f2937;
+        background: #fff; transition: border-color .2s;
+        outline: none; box-sizing: border-box;
+    }
+    .page-menus-form .form-group input:focus,
+    .page-menus-form .form-group select:focus {
+        border-color: var(--primary-500);
+    }
+    .page-menus-form .form-group select {
+        appearance: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 14px center;
+        padding-right: 36px; cursor: pointer;
+    }
+    .page-menus-form .form-group input[type="number"] { width: 140px; }
+    .page-menus-form .form-group .hint {
+        font-size: 11px; color: var(--secondary-700); margin-top: 6px;
+    }
+    .page-menus-form .form-group .hint code {
+        background: var(--primary-100); padding: 1px 6px;
+        border-radius: 4px; font-size: 11px; color: var(--primary-500);
+    }
+    .page-menus-form .checkbox-row {
+        display: flex; align-items: center; gap: 10px;
+    }
+    .page-menus-form .checkbox-row input[type="checkbox"] {
+        width: 20px; height: 20px; accent-color: var(--primary-500);
+        cursor: pointer; flex-shrink: 0;
+    }
+    .page-menus-form .checkbox-row span { font-size: 14px; color: var(--secondary-800); }
+
+    .page-menus-form .field-error {
+        font-size: 12px; color: var(--danger-500); margin-top: 5px;
+        display: flex; align-items: center; gap: 4px;
+    }
+    .page-menus-form .field-error::before {
+        content: 'warning'; font-family: 'Material Icons'; font-size: 14px;
     }
 
-    .btn-menu-form:hover {
-        opacity: 0.85;
+    .page-menus-form .form-actions {
+        display: flex; gap: 12px; justify-content: flex-end;
+        margin-top: 28px;
+    }
+    .page-menus-form .form-actions .btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        font-size: 14px; font-weight: 700; padding: 14px 36px;
+        border-radius: 100px; border: none; cursor: pointer;
+        transition: all .2s; text-decoration: none; font-family: inherit;
+    }
+    .page-menus-form .form-actions .btn:active { transform: scale(.97); }
+    .page-menus-form .form-actions .btn-primary {
+        background: var(--primary-500); color: #fff;
+    }
+    .page-menus-form .form-actions .btn-primary:hover {
+        opacity: .9; box-shadow: 0 4px 14px rgba(22,66,60,0.3);
+    }
+    .page-menus-form .form-actions .btn-secondary {
+        background: transparent; color: var(--secondary-700);
+        border: 2px solid var(--primary-200);
+    }
+    .page-menus-form .form-actions .btn-secondary:hover {
+        background: var(--primary-100); border-color: var(--primary-300);
     }
 
-    .btn-menu-form-primary {
-        background-color: #16423c;
-        color: #fff;
-    }
-
-    .btn-menu-form-secondary {
-        background-color: #d9d9d9;
-        color: #2b2b2b;
-    }
-
-    .field-error {
-        color: #9a0000;
-        font-size: 12px;
-        margin-top: 4px;
+    @media (max-width: 768px) {
+        .page-menus-form .form-card { padding: 24px 20px; border-radius: 20px; }
+        .page-menus-form .form-actions { flex-direction: column; }
+        .page-menus-form .form-actions .btn { justify-content: center; }
     }
 </style>
 
-<div class="menu-form-wrap">
-    <div class="menu-form-header">
-        <h1 class="menu-form-title">{{ isset($menu) ? 'Edit Menu' : 'Tambah Menu Baru' }}</h1>
-        <a href="{{ route('adminweb.menus') }}" class="btn-menu-form btn-menu-form-secondary">
-            <span class="material-icons" style="font-size:18px;">arrow_back</span>
+<div class="page-menus-form">
+    <div class="page-header">
+        <h1>{{ isset($menu) ? 'Edit Menu' : 'Tambah Menu Baru' }}</h1>
+        <a href="{{ route('adminweb.menus') }}" class="btn-back">
+            <span class="material-icons">arrow_back</span>
             Kembali
         </a>
     </div>
@@ -162,67 +134,65 @@
             @method('PUT')
         @endif
 
-        <div class="menu-form-card">
-            <div class="menu-form-card-body">
-                <div class="menu-form-field">
-                    <label for="label">Nama Menu <span style="color:#9a0000;">*</span></label>
-                    <input type="text" id="label" name="label" value="{{ old('label', $menu->label ?? '') }}" placeholder="Contoh: Tentang Kami" required>
-                    @error('label')
-                        <div class="field-error">{{ $message }}</div>
-                    @enderror
-                </div>
+        <div class="form-card">
+            <div class="form-group">
+                <label for="label">Nama Menu <span class="required-star">*</span></label>
+                <input type="text" id="label" name="label" value="{{ old('label', $menu->label ?? '') }}" placeholder="Contoh: Tentang Kami" required>
+                @error('label')
+                    <div class="field-error">{{ $message }}</div>
+                @enderror
+            </div>
 
-                <div class="menu-form-field">
-                    <label for="custom_url">URL / Link</label>
-                    <input type="text" id="custom_url" name="custom_url" value="{{ old('custom_url', $menu->custom_url ?? '') }}" placeholder="Contoh: /tentang-kami, https://example.com, #section">
-                    <div class="hint">
-                        Bisa berupa path internal (<code>/tentang-kami</code>), URL eksternal (<code>https://...</code>), 
-                        atau anchor (<code>#section</code>). Kosongi jika tidak diperlukan.
-                    </div>
-                    @error('custom_url')
-                        <div class="field-error">{{ $message }}</div>
-                    @enderror
+            <div class="form-group">
+                <label for="custom_url">URL / Link</label>
+                <input type="text" id="custom_url" name="custom_url" value="{{ old('custom_url', $menu->custom_url ?? '') }}" placeholder="Contoh: /tentang-kami, https://example.com, #section">
+                <div class="hint">
+                    Bisa berupa path internal (<code>/tentang-kami</code>), URL eksternal (<code>https://...</code>),
+                    atau anchor (<code>#section</code>). Kosongi jika tidak diperlukan.
                 </div>
+                @error('custom_url')
+                    <div class="field-error">{{ $message }}</div>
+                @enderror
+            </div>
 
-                <div class="menu-form-field">
-                    <label for="parent_id">Induk Menu (untuk sub-menu)</label>
-                    <select id="parent_id" name="parent_id">
-                        <option value="">-- Tidak ada (menu utama) --</option>
-                        @foreach($parents as $parent)
-                            <option value="{{ $parent->id }}" {{ old('parent_id', $menu->parent_id ?? '') == $parent->id ? 'selected' : '' }}>
-                                {{ $parent->label }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <div class="hint">Pilih "Tidak ada" jika ini menu utama. Pilih menu lain jika ini sub-menu.</div>
-                    @error('parent_id')
-                        <div class="field-error">{{ $message }}</div>
-                    @enderror
-                </div>
+            <div class="form-group">
+                <label for="parent_id">Induk Menu</label>
+                <select id="parent_id" name="parent_id">
+                    <option value="">— Tidak ada (menu utama) —</option>
+                    @foreach($parents as $parent)
+                        <option value="{{ $parent->id }}" {{ old('parent_id', $menu->parent_id ?? '') == $parent->id ? 'selected' : '' }}>
+                            {{ $parent->label }}
+                        </option>
+                    @endforeach
+                </select>
+                <div class="hint">Pilih "Tidak ada" jika ini menu utama. Pilih menu lain jika ini sub-menu.</div>
+                @error('parent_id')
+                    <div class="field-error">{{ $message }}</div>
+                @enderror
+            </div>
 
-                <div class="menu-form-field">
-                    <label for="sort_order">Urutan</label>
-                    <input type="number" id="sort_order" name="sort_order" value="{{ old('sort_order', $menu->sort_order ?? '') }}" placeholder="Otomatis jika kosong" min="0" style="width:120px;">
-                    <div class="hint">Angka lebih kecil tampil lebih dulu.</div>
-                    @error('sort_order')
-                        <div class="field-error">{{ $message }}</div>
-                    @enderror
-                </div>
+            <div class="form-group">
+                <label for="sort_order">Urutan</label>
+                <input type="number" id="sort_order" name="sort_order" value="{{ old('sort_order', $menu->sort_order ?? '') }}" placeholder="Otomatis" min="0">
+                <div class="hint">Angka lebih kecil tampil lebih dulu. Kosongi untuk urutan otomatis.</div>
+                @error('sort_order')
+                    <div class="field-error">{{ $message }}</div>
+                @enderror
+            </div>
 
-                <div class="menu-form-field">
-                    <label class="checkbox-row">
-                        <input type="checkbox" name="is_active" value="1" {{ old('is_active', $menu->is_active ?? true) ? 'checked' : '' }}>
-                        <span>Aktif</span>
-                    </label>
-                    <div class="hint">Nonaktifkan untuk menyembunyikan menu dari navbar tanpa menghapus.</div>
-                </div>
+            <div class="form-group">
+                <label class="checkbox-row">
+                    <input type="checkbox" name="is_active" value="1" {{ old('is_active', $menu->is_active ?? true) ? 'checked' : '' }}>
+                    <span>Aktif</span>
+                </label>
+                <div class="hint">Nonaktifkan untuk menyembunyikan menu dari navbar tanpa menghapus.</div>
             </div>
         </div>
 
-        <div class="menu-form-actions">
-            <a href="{{ route('adminweb.menus') }}" class="btn-menu-form btn-menu-form-secondary">Batal</a>
-            <button type="submit" class="btn-menu-form btn-menu-form-primary">
-                <span class="material-icons" style="font-size:18px;">save</span>
+        <div class="form-actions">
+            <a href="{{ route('adminweb.menus') }}" class="btn btn-secondary">Batal</a>
+            <button type="submit" class="btn btn-primary">
+                <span class="material-icons">save</span>
                 {{ isset($menu) ? 'Simpan Perubahan' : 'Tambah Menu' }}
             </button>
         </div>
