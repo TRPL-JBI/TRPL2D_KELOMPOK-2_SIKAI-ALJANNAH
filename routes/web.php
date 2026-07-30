@@ -114,6 +114,8 @@ Route::middleware(['auth', 'role:superadmin'])->group(function () {
     Route::get('/superadmin/file', [SuperAdminController::class, 'fileIndex'])->name('superadmin.file');
     Route::post('/superadmin/file/upload', [SuperAdminController::class, 'uploadFile'])->name('superadmin.file.upload');
     Route::get('/superadmin/file/{id}/download', [SuperAdminController::class, 'downloadFile'])->name('superadmin.file.download');
+    Route::get('/superadmin/file/trash', [SuperAdminController::class, 'trashFiles'])->name('superadmin.file.trash');
+    Route::post('/superadmin/file/{id}/restore', [SuperAdminController::class, 'restoreFile'])->name('superadmin.file.restore');
     Route::put('/superadmin/user/{id}', [SuperAdminController::class, 'updateUser'])->name('superadmin.user.update');
     Route::post('/superadmin/user', [SuperAdminController::class, 'storeUser'])->name('superadmin.user.store');
 });
@@ -184,6 +186,10 @@ Route::middleware(['auth', 'role:adminweb'])->group(function () {
     Route::put('/adminweb/menus/{id}', [MenuController::class, 'update'])->name('adminweb.menus.update');
     Route::delete('/adminweb/menus/{id}', [MenuController::class, 'destroy'])->name('adminweb.menus.destroy');
     Route::put('/adminweb/menus/{id}/toggle', [MenuController::class, 'toggle'])->name('adminweb.menus.toggle');
+
+    Route::get('/adminweb/files', [AdminWebController::class, 'files'])->name('adminweb.files');
+    Route::delete('/adminweb/files/{id}', [AdminWebController::class, 'destroyFile'])->name('adminweb.files.destroy');
+    Route::post('/adminweb/files/{id}/restore', [AdminWebController::class, 'restoreFile'])->name('adminweb.files.restore');
 });
 
 // Public file serving — zero-trust (download only)

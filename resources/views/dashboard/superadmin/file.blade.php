@@ -26,7 +26,13 @@
         </div>
     @endif
 
-    <h1 style="font-size: 24px; font-weight: 700; color: #16423c; margin-bottom: 30px;">File Management</h1>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;flex-wrap:wrap;gap:12px;">
+        <h1 style="font-size: 24px; font-weight: 700; color: #16423c; margin:0;">File Management</h1>
+        <a href="/superadmin/file/trash" style="display:inline-flex;align-items:center;gap:6px;background:#fef2f2;color:#dc2626;padding:8px 20px;border-radius:100px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s;">
+            <span class="material-icons" style="font-size:18px;">delete_sweep</span>
+            Tempat Sampah
+        </a>
+    </div>
 
     <div class="card" style="margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">

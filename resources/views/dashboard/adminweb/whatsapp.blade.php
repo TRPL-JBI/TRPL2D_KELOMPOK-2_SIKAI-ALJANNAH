@@ -5,7 +5,7 @@
         ['label' => 'Pages', 'url' => '/adminweb/pages', 'active' => 'adminweb/pages'],
         ['label' => 'Menus', 'url' => '/adminweb/menus', 'active' => 'adminweb/menus*'],
         ['label' => 'WhatsApp', 'url' => '/adminweb/whatsapp', 'active' => 'adminweb/whatsapp*'],
-        ['label' => 'Files & Images', 'url' => '#', 'active' => 'adminweb/files'],
+        ['label' => 'Files & Images', 'url' => '/adminweb/files', 'active' => 'adminweb/files*'],
     ]
 ])
 

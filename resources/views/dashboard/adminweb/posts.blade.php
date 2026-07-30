@@ -4,7 +4,7 @@
         ['label' => 'Posts', 'url' => '/adminweb/posts', 'active' => 'adminweb/posts*'],
         ['label' => 'Pages', 'url' => '/adminweb/pages', 'active' => 'adminweb/pages'],
         ['label' => 'Menus', 'url' => '/adminweb/menus', 'active' => 'adminweb/menus*'],
-        ['label' => 'Files & Images', 'url' => '#', 'active' => 'adminweb/files'],
+        ['label' => 'Files & Images', 'url' => '/adminweb/files', 'active' => 'adminweb/files*'],
     ]
 ])
 

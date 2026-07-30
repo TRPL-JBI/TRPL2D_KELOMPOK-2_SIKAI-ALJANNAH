@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Files & Images — Admin Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-primary: #0e1117;
+      --bg-secondary: #161b22;
+      --bg-card: #1c2128;
+      --bg-card-hover: #242b35;
+      --border: #2d333b;
+      --border-light: #373e47;
+      --fg: #e6edf3;
+      --fg-muted: #7d8590;
+      --fg-subtle: #545d68;
+      --accent: #00d68f;
+      --accent-dim: rgba(0, 214, 143, 0.12);
+      --accent-hover: #00f0a0;
+      --danger: #f85149;
+      --warning: #d29922;
+      --info: #58a6ff;
+      --sidebar-w: 260px;
+      --detail-w: 400px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-primary);
+      color: var(--fg);
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    h1, h2, h3, h4, h5 {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sidebar-logo .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), #00b87a);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: #000;
+      font-weight: 700;
+    }
+
+    .sidebar-logo span {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.5px;
+    }
+
+    .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--fg-subtle);
+      padding: 12px 12px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--fg-muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      margin-bottom: 2px;
+    }
+
+    .nav-item:hover { color: var(--fg); background: var(--bg-card); }
+
+    .nav-item.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .nav-item i { width: 20px; text-align: center; font-size: 15px; }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sidebar-footer .avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f97316, #ef4444);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: #fff;
+    }
+
+    .sidebar-footer .user-info { flex: 1; }
+    .sidebar-footer .user-info .name { font-size: 13px; font-weight: 600; }
+    .sidebar-footer .user-info .role { font-size: 11px; color: var(--fg-muted); }
+
+    /* Area utama */
+    .main-area {
+      margin-left: var(--sidebar-w);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: margin-right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .main-area.detail-open {
+      margin-right: var(--detail-w);
+    }
+
+    /* Header */
+    .top-header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary);
+      flex-shrink: 0;
+    }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--fg-muted);
+    }
+
+    .breadcrumb a { color: var(--fg-muted); text-decoration: none; transition: color 0.2s; }
+    .breadcrumb a:hover { color: var(--fg); }
+    .breadcrumb .sep { color: var(--fg-subtle); }
+    .breadcrumb .current { color: var(--fg); font-weight: 600; }
+
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+
+    .btn-icon {
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .btn-icon:hover {
+      border-color: var(--border-light);
+      color: var(--fg);
+      background: var(--bg-card-hover);
+    }
+
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 18px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0, 214, 143, 0.25); }
+
+    /* Konten */
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 32px;
+    }
+
+    .content-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .content-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .content-header p {
+      color: var(--fg-muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .file-count {
+      font-size: 13px;
+      color: var(--fg-muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 8px;
+    }
+
+    .file-count strong {
+      color: var(--fg);
+      font-weight: 600;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 240px;
+      position: relative;
+    }
+
+    .search-box i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--fg-subtle);
+      font-size: 14px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--fg);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-box input::placeholder { color: var(--fg-subtle); }
+    .search-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+    .filter-tabs {
+      display: flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .filter-tab {
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      background: none;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .filter-tab:hover { color: var(--fg); }
+
+    .filter-tab.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .filter-tab + .filter-tab { border-left: 1px solid var(--border); }
+
+    .view-toggle {
+      display: flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .view-btn {
+      padding: 9px 14px;
+      color: var(--fg-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      background: none;
+      font-size: 14px;
+    }
+
+    .view-btn:hover { color: var(--fg); }
+    .view-btn.active { color: var(--accent); background: var(--accent-dim); }
+
+    .sort-select {
+      padding: 9px 32px 9px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--fg);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237d8590' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .sort-select:focus { border-color: var(--accent); }
+
+    /* Grid file */
+    .files-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .files-grid.list-view {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .file-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .file-card:hover {
+      border-color: var(--border-light);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+
+    .file-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-dim), 0 8px 30px rgba(0,0,0,0.3);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .file-card:nth-child(1) { animation-delay: 0.02s; }
+    .file-card:nth-child(2) { animation-delay: 0.04s; }
+    .file-card:nth-child(3) { animation-delay: 0.06s; }
+    .file-card:nth-child(4) { animation-delay: 0.08s; }
+    .file-card:nth-child(5) { animation-delay: 0.10s; }
+    .file-card:nth-child(6) { animation-delay: 0.12s; }
+    .file-card:nth-child(7) { animation-delay: 0.14s; }
+    .file-card:nth-child(8) { animation-delay: 0.16s; }
+    .file-card:nth-child(9) { animation-delay: 0.18s; }
+    .file-card:nth-child(10) { animation-delay: 0.20s; }
+    .file-card:nth-child(11) { animation-delay: 0.22s; }
+    .file-card:nth-child(12) { animation-delay: 0.24s; }
+
+    .file-thumb {
+      width: 100%;
+      aspect-ratio: 4/3;
+      overflow: hidden;
+      position: relative;
+      background: var(--bg-primary);
+    }
+
+    .file-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .file-card:hover .file-thumb img { transform: scale(1.05); }
+
+    .file-type-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      backdrop-filter: blur(8px);
+    }
+
+    .badge-image { background: rgba(0,214,143,0.85); color: #000; }
+    .badge-pdf { background: rgba(248,81,73,0.85); color: #fff; }
+    .badge-doc { background: rgba(88,166,255,0.85); color: #fff; }
+    .badge-xls { background: rgba(0,214,143,0.85); color: #000; }
+    .badge-video { background: rgba(210,153,34,0.85); color: #000; }
+    .badge-zip { background: rgba(139,92,246,0.85); color: #fff; }
+
+    .file-thumb-nonimg {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .file-thumb-nonimg i { font-size: 40px; }
+    .file-thumb-nonimg span { font-size: 12px; color: var(--fg-subtle); font-weight: 600; text-transform: uppercase; }
+
+    .file-info {
+      padding: 14px;
+    }
+
+    .file-name {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 6px;
+    }
+
+    .file-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--fg-muted);
+    }
+
+    /* List view */
+    .list-view .file-card {
+      display: flex;
+      flex-direction: row;
+      border-radius: 10px;
+    }
+
+    .list-view .file-thumb {
+      width: 80px;
+      min-width: 80px;
+      aspect-ratio: 1;
+      border-radius: 10px 0 0 10px;
+    }
+
+    .list-view .file-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 12px 20px;
+    }
+
+    .list-view .file-name { margin-bottom: 0; flex: 1; }
+
+    .list-view .file-meta { flex-shrink: 0; gap: 24px; }
+
+    .list-view .file-meta-item { display: flex; align-items: center; gap: 6px; }
+
+    /* Panel detail */
+    .detail-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: var(--detail-w);
+      height: 100vh;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
+      z-index: 40;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .detail-panel.open { transform: translateX(0); }
+
+    .detail-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .detail-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .detail-close {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .detail-close:hover { border-color: var(--danger); color: var(--danger); background: rgba(248,81,73,0.1); }
+
+    .detail-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .detail-preview {
+      width: 100%;
+      aspect-ratio: 4/3;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--bg-primary);
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .detail-preview img { width: 100%; height: 100%; object-fit: contain; background: #000; }
+
+    .detail-preview-nonimg {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: var(--bg-card);
+    }
+
+    .detail-preview-nonimg i { font-size: 56px; }
+    .detail-preview-nonimg span { font-size: 14px; color: var(--fg-subtle); font-weight: 600; }
+
+    .detail-filename {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      word-break: break-all;
+      line-height: 1.3;
+    }
+
+    .detail-section {
+      margin-bottom: 24px;
+    }
+
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--fg-subtle);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 10px 0;
+      font-size: 13px;
+    }
+
+    .detail-row + .detail-row { border-top: 1px solid rgba(45,51,59,0.5); }
+
+    .detail-row .label {
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .detail-row .label i { width: 16px; text-align: center; font-size: 12px; }
+
+    .detail-row .value {
+      font-weight: 600;
+      text-align: right;
+      max-width: 60%;
+      word-break: break-all;
+    }
+
+    .detail-actions {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .btn-detail {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: 'DM Sans', sans-serif;
+      border: none;
+    }
+
+    .btn-download {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .btn-download:hover { background: var(--accent-hover); }
+
+    .btn-delete {
+      background: rgba(248,81,73,0.12);
+      color: var(--danger);
+      border: 1px solid rgba(248,81,73,0.2);
+    }
+
+    .btn-delete:hover { background: rgba(248,81,73,0.2); }
+
+    .btn-copy-link {
+      background: var(--bg-card);
+      color: var(--fg-muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-copy-link:hover { color: var(--fg); border-color: var(--border-light); }
+
+    /* Upload overlay */
+    .upload-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .upload-overlay.show { opacity: 1; pointer-events: all; }
+
+    .upload-modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      width: 500px;
+      max-width: 90vw;
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .upload-overlay.show .upload-modal { transform: scale(1); }
+
+    .upload-zone {
+      border: 2px dashed var(--border-light);
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .upload-zone i { font-size: 36px; color: var(--fg-subtle); margin-bottom: 16px; transition: color 0.3s; }
+    .upload-zone.dragover i { color: var(--accent); }
+
+    .upload-zone h4 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .upload-zone p { font-size: 13px; color: var(--fg-muted); }
+
+    .upload-zone .browse-link { color: var(--accent); cursor: pointer; font-weight: 600; }
+    .upload-zone .browse-link:hover { text-decoration: underline; }
+
+    .upload-progress {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .upload-progress.show { display: block; }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: var(--bg-card);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #00f0a0);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    .progress-text {
+      font-size: 12px;
+      color: var(--fg-muted);
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      animation: slideInToast 0.3s ease, fadeOutToast 0.3s ease 2.5s forwards;
+      min-width: 280px;
+    }
+
+    .toast i { font-size: 16px; }
+    .toast.success i { color: var(--accent); }
+    .toast.error i { color: var(--danger); }
+    .toast.info i { color: var(--info); }
+
+    @keyframes slideInToast {
+      from { opacity: 0; transform: translateX(40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes fadeOutToast {
+      to { opacity: 0; transform: translateX(40px); }
+    }
+
+    /* Checkbox */
+    .file-checkbox {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.2s;
+      cursor: pointer;
+      z-index: 5;
+    }
+
+    .file-card:hover .file-checkbox,
+    .file-card.selected .file-checkbox { opacity: 1; }
+
+    .file-card.selected .file-checkbox {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .file-checkbox i { font-size: 11px; color: #000; display: none; }
+    .file-card.selected .file-checkbox i { display: block; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--fg-subtle);
+      display: none;
+    }
+
+    .empty-state i { font-size: 48px; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 18px; color: var(--fg-muted); margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; }
+
+    /* Background ambient */
+    .ambient-glow {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(150px);
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-1 { top: -200px; right: -100px; background: var(--accent); }
+    .glow-2 { bottom: -200px; left: 200px; background: #f97316; }
+
+    /* Konfirmasi hapus */
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 150;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .confirm-overlay.show { opacity: 1; pointer-events: all; }
+
+    .confirm-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      width: 380px;
+      max-width: 90vw;
+      text-align: center;
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .confirm-overlay.show .confirm-box { transform: scale(1); }
+
+    .confirm-box .icon-circle {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: rgba(248,81,73,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 24px;
+      color: var(--danger);
+    }
+
+    .confirm-box h4 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .confirm-box p { font-size: 13px; color: var(--fg-muted); margin-bottom: 24px; line-height: 1.5; }
+
+    .confirm-btns { display: flex; gap: 10px; }
+    .confirm-btns button { flex: 1; }
+
+    .btn-cancel {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--fg-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-cancel:hover { color: var(--fg); border-color: var(--border-light); }
+
+    .btn-danger {
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: var(--danger);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-danger:hover { background: #e5443d; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .sidebar { transform: translateX(-100%); }
+      .main-area { margin-left: 0; }
+      .main-area.detail-open { margin-right: 0; }
+      .detail-panel { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" role="navigation" aria-label="Menu navigasi utama">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fas fa-cube"></i></div>
+      <span>AdminHub</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Utama</div>
+      <div class="nav-item"><i class="fas fa-chart-pie"></i> Dashboard</div>
+      <div class="nav-item"><i class="fas fa-pen-to-square"></i> Artikel</div>
+      <div class="nav-item"><i class="fas fa-layer-group"></i> Kategori</div>
+      <div class="nav-item"><i class="fas fa-comment-dots"></i> Komentar <span class="nav-badge">12</span></div>
+
+      <div class="nav-label">Media</div>
+      <div class="nav-item active"><i class="fas fa-photo-film"></i> Files & Images</div>
+      <div class="nav-item"><i class="fas fa-film"></i> Video</div>
+
+      <div class="nav-label">Pengaturan</div>
+      <div class="nav-item"><i class="fas fa-users"></i> Pengguna</div>
+      <div class="nav-item"><i class="fas fa-shield-halved"></i> Keamanan</div>
+      <div class="nav-item"><i class="fas fa-gear"></i> Konfigurasi</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="avatar">A</div>
+      <div class="user-info">
+        <div class="name">Admin Utama</div>
+        <div class="role">Super Admin</div>
+      </div>
+      <button class="btn-icon" style="width:32px;height:32px;font-size:12px;" aria-label="Logout">
+        <i class="fas fa-right-from-bracket"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Area utama -->
+  <div class="main-area" id="mainArea">
+    <header class="top-header">
+      <div class="breadcrumb">
+        <a href="#">Dashboard</a>
+        <span class="sep"><i class="fas fa-chevron-right" style="font-size:9px;"></i></span>
+        <a href="#">Media</a>
+        <span class="sep"><i class="fas fa-chevron-right" style="font-size:9px;"></i></span>
+        <span class="current">Files & Images</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" aria-label="Notifikasi"><i class="fas fa-bell"></i></button>
+        <button class="btn-primary" id="btnUpload" aria-label="Unggah file baru">
+          <i class="fas fa-cloud-arrow-up"></i> Unggah File
+        </button>
+      </div>
+    </header>
+
+    <main class="content-area">
+      <div class="content-header">
+        <div>
+          <h1>Files & Images</h1>
+          <p>Kelola semua file dan gambar yang telah diunggah</p>
+        </div>
+        <div class="file-count" id="fileCount">Menampilkan <strong>12</strong> file</div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <i class="fas fa-magnifying-glass"></i>
+          <input type="text" id="searchInput" placeholder="Cari file berdasarkan nama..." aria-label="Cari file">
+        </div>
+        <div class="filter-tabs" role="tablist">
+          <button class="filter-tab active" data-filter="all" role="tab" aria-selected="true">Semua</button>
+          <button class="filter-tab" data-filter="image" role="tab" aria-selected="false">Gambar</button>
+          <button class="filter-tab" data-filter="document" role="tab" aria-selected="false">Dokumen</button>
+          <button class="filter-tab" data-filter="video" role="tab" aria-selected="false">Video</button>
+          <button class="filter-tab" data-filter="archive" role="tab" aria-selected="false">Arsip</button>
+        </div>
+        <div class="view-toggle">
+          <button class="view-btn active" data-view="grid" aria-label="Tampilan grid"><i class="fas fa-grid-2"></i></button>
+          <button class="view-btn" data-view="list" aria-label="Tampilan list"><i class="fas fa-list"></i></button>
+        </div>
+        <select class="sort-select" id="sortSelect" aria-label="Urutkan file">
+          <option value="newest">Terbaru</option>
+          <option value="oldest">Terlama</option>
+          <option value="name-asc">Nama A-Z</option>
+          <option value="name-desc">Nama Z-A</option>
+          <option value="size-desc">Ukuran Terbesar</option>
+          <option value="size-asc">Ukuran Terkecil</option>
+        </select>
+      </div>
+
+      <!-- Grid file -->
+      <div class="files-grid" id="filesGrid"></div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">
+        <i class="fas fa-folder-open"></i>
+        <h3>Tidak Ada File Ditemukan</h3>
+        <p>Coba ubah kata kunci pencarian atau filter yang digunakan</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Panel detail -->
+  <aside class="detail-panel" id="detailPanel" role="complementary" aria-label="Detail file">
+    <div class="detail-header">
+      <h3>Detail File</h3>
+      <button class="detail-close" id="detailClose" aria-label="Tutup panel detail"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+    <div class="detail-actions">
+      <button class="btn-detail btn-download" id="btnDownload"><i class="fas fa-download"></i> Unduh</button>
+      <button class="btn-detail btn-copy-link" id="btnCopyLink"><i class="fas fa-link"></i> Salin</button>
+      <button class="btn-detail btn-delete" id="btnDelete"><i class="fas fa-trash-can"></i> Hapus</button>
+    </div>
+  </aside>
+
+  <!-- Modal upload -->
+  <div class="upload-overlay" id="uploadOverlay">
+    <div class="upload-modal">
+      <h3 style="font-size:20px;font-weight:700;margin-bottom:20px;">Unggah File Baru</h3>
+      <div class="upload-zone" id="uploadZone">
+        <i class="fas fa-cloud-arrow-up"></i>
+        <h4>Seret & Lepas File di Sini</h4>
+        <p>atau <span class="browse-link" id="browseLink">pilih file dari perangkat</span></p>
+        <p style="margin-top:12px;font-size:11px;color:var(--fg-subtle);">Mendukung JPG, PNG, GIF, SVG, PDF, DOC, XLS, ZIP — Maks 50MB</p>
+        <input type="file" id="fileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" style="display:none;">
+      </div>
+      <div class="upload-progress" id="uploadProgress">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Mengunggah...</div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+        <button class="btn-cancel" id="uploadCancel">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Konfirmasi hapus -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+      <div class="icon-circle"><i class="fas fa-trash-can"></i></div>
+      <h4>Hapus File?</h4>
+      <p id="confirmText">File ini akan dihapus secara permanen dan tidak dapat dikembalikan.</p>
+      <div class="confirm-btns">
+        <button class="btn-cancel" id="confirmCancel">Batal</button>
+        <button class="btn-danger" id="confirmDelete">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // === Data file simulasi ===
+    const filesData = [
+      {
+        id: 1, name: 'hero-banner-landing.jpg', type: 'image', ext: 'JPG',
+        size: 2456000, dimensions: '1920 x 1080', colorSpace: 'sRGB',
+        uploaded: '2025-01-15T09:23:00', uploader: 'Admin Utama',
+        url: 'https://picsum.photos/seed/hero01/800/600.jpg',
+        alt: 'Banner utama halaman landing'
+      },
+      {
+        id: 2, name: 'logo-perusahaan-baru.png', type: 'image', ext: 'PNG',
+        size: 184000, dimensions: '512 x 512', colorSpace: 'sRGB',
+        uploaded: '2025-01-14T14:05:00', uploader: 'Admin Utama',
+        url: 'https://picsum.photos/seed/logo02/800/600.jpg',
+        alt: 'Logo perusahaan terbaru'
+      },
+      {
+        id: 3, name: 'panduan-penggunaan-v3.pdf', type: 'document', ext: 'PDF',
+        size: 8750000, pages: 42,
+        uploaded: '2025-01-13T11:30:00', uploader: 'Editor',
+        url: null, alt: ''
+      },
+      {
+        id: 4, name: 'foto-tim-workshop.jpg', type: 'image', ext: 'JPG',
+        size: 3200000, dimensions: '4032 x 3024', colorSpace: 'sRGB',
+        uploaded: '2025-01-12T16:45:00', uploader: 'Admin Utama',
+        url: 'https://picsum.photos/seed/team04/800/600.jpg',
+        alt: 'Foto tim saat workshop'
+      },
+      {
+        id: 5, name: 'laporan-keuangan-q4.xlsx', type: 'document', ext: 'XLS',
+        size: 1240000, sheets: 5,
+        uploaded: '2025-01-11T08:15:00', uploader: 'Finance',
+        url: null, alt: ''
+      },
+      {
+        id: 6, name: 'product-shot-headphone.jpg', type: 'image', ext: 'JPG',
+        size: 4100000, dimensions: '2400 x 1600', colorSpace: 'Adobe RGB',
+        uploaded: '2025-01-10T13:20:00', uploader: 'Admin Utama',
+        url: 'https://picsum.photos/seed/prod06/800/600.jpg',
+        alt: 'Foto produk headphone'
+      },
+      {
+        id: 7, name: 'iklan-video-promo.mp4', type: 'video', ext: 'MP4',
+        size: 48500000, duration: '00:32', resolution: '1080p',
+        uploaded: '2025-01-09T10:00:00', uploader: 'Admin Utama',
+        url: null, alt: ''
+      },
+      {
+        id: 8, name: 'background-abstract-dark.svg', type: 'image', ext: 'SVG',
+        size: 24000, dimensions: '1920 x 1080', colorSpace: '-',
+        uploaded: '2025-01-08T15:33:00', uploader: 'Designer',
+        url: 'https://picsum.photos/seed/abs08/800/600.jpg',
+        alt: 'Background abstrak gelap'
+      },
+      {
+        id: 9, name: 'backup-database-jan.zip', type: 'archive', ext: 'ZIP',
+        size: 156000000, files: 847,
+        uploaded: '2025-01-07T02:00:00', uploader: 'System',
+        url: null, alt: ''
+      },
+      {
+        id: 10, name: 'infografis-statistik-2024.png', type: 'image', ext: 'PNG',
+        size: 1890000, dimensions: '1200 x 1600', colorSpace: 'sRGB',
+        uploaded: '2025-01-06T09:50:00', uploader: 'Designer',
+        url: 'https://picsum.photos/seed/info10/800/600.jpg',
+        alt: 'Infografis statistik tahun 2024'
+      },
+      {
+        id: 11, name: 'surat-perjanjian-kerjasama.docx', type: 'document', ext: 'DOC',
+        size: 320000, pages: 8,
+        uploaded: '2025-01-05T11:10:00', uploader: 'Legal',
+        url: null, alt: ''
+      },
+      {
+        id: 12, name: 'foto-kantor-baru.jpg', type: 'image', ext: 'JPG',
+        size: 5600000, dimensions: '6000 x 4000', colorSpace: 'sRGB',
+        uploaded: '2025-01-04T14:25:00', uploader: 'Admin Utama',
+        url: 'https://picsum.photos/seed/office12/800/600.jpg',
+        alt: 'Foto kantor baru perusahaan'
+      }
+    ];
+
+    // === State ===
+    let selectedFileId = null;
+    let currentFilter = 'all';
+    let currentView = 'grid';
+    let currentSort = 'newest';
+    let searchQuery = '';
+
+    // === DOM ===
+    const filesGrid = document.getElementById('filesGrid');
+    const emptyState = document.getElementById('emptyState');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailBody = document.getElementById('detailBody');
+    const detailClose = document.getElementById('detailClose');
+    const mainArea = document.getElementById('mainArea');
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const uploadOverlay = document.getElementById('uploadOverlay');
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const confirmOverlay = document.getElementById('confirmOverlay');
+    const toastContainer = document.getElementById('toastContainer');
+    const fileCountEl = document.getElementById('fileCount');
+
+    // === Utilitas ===
+    function formatSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function formatDate(isoStr) {
+      const d = new Date(isoStr);
+      const options = { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+      return d.toLocaleDateString('id-ID', options);
+    }
+
+    function timeAgo(isoStr) {
+      const now = new Date();
+      const d = new Date(isoStr);
+      const diff = Math.floor((now - d) / 1000);
+      if (diff < 60) return 'Baru saja';
+      if (diff < 3600) return Math.floor(diff / 60) + ' menit lalu';
+      if (diff < 86400) return Math.floor(diff / 3600) + ' jam lalu';
+      if (diff < 604800) return Math.floor(diff / 86400) + ' hari lalu';
+      return formatDate(isoStr);
+    }
+
+    function getBadgeClass(type) {
+      const map = { image: 'badge-image', document: 'badge-doc', video: 'badge-video', archive: 'badge-zip' };
+      return map[type] || 'badge-doc';
+    }
+
+    function getFileIcon(type, ext) {
+      if (type === 'image') return { icon: 'fa-image', color: 'var(--accent)' };
+      if (ext === 'PDF') return { icon: 'fa-file-pdf', color: 'var(--danger)' };
+      if (ext === 'DOC' || ext === 'DOCX') return { icon: 'fa-file-word', color: 'var(--info)' };
+      if (ext === 'XLS' || ext === 'XLSX') return { icon: 'fa-file-excel', color: 'var(--accent)' };
+      if (type === 'video') return { icon: 'fa-file-video', color: 'var(--warning)' };
+      if (type === 'archive') return { icon: 'fa-file-zipper', color: '#8b5cf6' };
+      return { icon: 'fa-file', color: 'var(--fg-muted)' };
+    }
+
+    // === Render grid ===
+    function renderFiles() {
+      let filtered = [...filesData];
+
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(f => f.type === currentFilter);
+      }
+
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter(f => f.name.toLowerCase().includes(q));
+      }
+
+      switch (currentSort) {
+        case 'newest': filtered.sort((a, b) => new Date(b.uploaded) - new Date(a.uploaded)); break;
+        case 'oldest': filtered.sort((a, b) => new Date(a.uploaded) - new Date(b.uploaded)); break;
+        case 'name-asc': filtered.sort((a, b) => a.name.localeCompare(b.name)); break;
+        case 'name-desc': filtered.sort((a, b) => b.name.localeCompare(a.name)); break;
+        case 'size-desc': filtered.sort((a, b) => b.size - a.size); break;
+        case 'size-asc': filtered.sort((a, b) => a.size - b.size); break;
+      }
+
+      // Perbarui hitungan file
+      fileCountEl.innerHTML = `Menampilkan <strong>${filtered.length}</strong> file`;
+
+      if (filtered.length === 0) {
+        filesGrid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+      filesGrid.style.display = '';
+      emptyState.style.display = 'none';
+
+      filesGrid.className = currentView === 'list' ? 'files-grid list-view' : 'files-grid';
+
+      filesGrid.innerHTML = filtered.map(file => {
+        const isSelected = file.id === selectedFileId;
+        const fi = getFileIcon(file.type, file.ext);
+        const isImage = file.type === 'image' && file.url;
+
+        if (currentView === 'list') {
+          return `
+            <div class="file-card ${isSelected ? 'selected' : ''}" data-id="${file.id}" tabindex="0" role="button" aria-label="Lihat detail ${file.name}">
+              <div class="file-thumb">
+                ${isImage
+                  ? `<img src="${file.url}" alt="${file.alt || file.name}" loading="lazy">`
+                  : `<div class="file-thumb-nonimg"><i class="fas ${fi.icon}" style="color:${fi.color}"></i><span>${file.ext}</span></div>`
+                }
+                <span class="file-type-badge ${getBadgeClass(file.type)}">${file.ext}</span>
+              </div>
+              <div class="file-info">
+                <div class="file-name" title="${file.name}">${file.name}</div>
+                <div class="file-meta">
+                  <div class="file-meta-item"><i class="fas fa-hard-drive" style="font-size:11px;"></i> ${formatSize(file.size)}</div>
+                  <div class="file-meta-item"><i class="fas fa-calendar" style="font-size:11px;"></i> ${timeAgo(file.uploaded)}</div>
+                  <div class="file-meta-item"><i class="fas fa-user" style="font-size:11px;"></i> ${file.uploader}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="file-card ${isSelected ? 'selected' : ''}" data-id="${file.id}" tabindex="0" role="button" aria-label="Lihat detail ${file.name}">
+            <div class="file-thumb">
+              ${isImage
+                ? `<img src="${file.url}" alt="${file.alt || file.name}" loading="lazy">`
+                : `<div class="file-thumb-nonimg"><i class="fas ${fi.icon}" style="color:${fi.color}"></i><span>${file.ext}</span></div>`
+              }
+              <span class="file-type-badge ${getBadgeClass(file.type)}">${file.ext}</span>
+              <div class="file-checkbox" data-check="${file.id}"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="file-info">
+              <div class="file-name" title="${file.name}">${file.name}</div>
+              <div class="file-meta">
+                <span>${formatSize(file.size)}</span>
+                <span>${timeAgo(file.uploaded)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // === Render detail panel ===
+    function renderDetail(file) {
+      const fi = getFileIcon(file.type, file.ext);
+      const isImage = file.type === 'image' && file.url;
+
+      let previewHTML = '';
+      if (isImage) {
+        previewHTML = `<div class="detail-preview"><img src="${file.url}" alt="${file.alt || file.name}"></div>`;
+      } else {
+        previewHTML = `
+          <div class="detail-preview">
+            <div class="detail-preview-nonimg">
+              <i class="fas ${fi.icon}" style="color:${fi.color}"></i>
+              <span>File ${file.ext}</span>
+            </div>
+          </div>
+        `;
+      }
+
+      let infoRows = `
+        <div class="detail-row"><span class="label"><i class="fas fa-tag"></i> Tipe</span><span class="value">${file.ext} File</span></div>
+        <div class="detail-row"><span class="label"><i class="fas fa-hard-drive"></i> Ukuran</span><span class="value">${formatSize(file.size)}</span></div>
+        <div class="detail-row"><span class="label"><i class="fas fa-calendar-plus"></i> Diunggah</span><span class="value">${formatDate(file.uploaded)}</span></div>
+        <div class="detail-row"><span class="label"><i class="fas fa-clock"></i> Waktu Relatif</span><span class="value">${timeAgo(file.uploaded)}</span></div>
+        <div class="detail-row"><span class="label"><i class="fas fa-user"></i> Pengunggah</span><span class="value">${file.uploader}</span></div>
+      `;
+
+      if (file.dimensions) {
+        infoRows += `<div class="detail-row"><span class="label"><i class="fas fa-expand"></i> Dimensi</span><span class="value">${file.dimensions} px</span></div>`;
+      }
+      if (file.colorSpace && file.colorSpace !== '-') {
+        infoRows += `<div class="detail-row"><span class="label"><i class="fas fa-palette"></i> Ruang Warna</span><span class="value">${file.colorSpace}</span></div>`;
+      }
+      if (file.pages) {
+        infoRows += `<div class="detail-row"><span class="label"><i class="fas fa-file-lines"></i> Halaman</span><span class="value">${file.pages} halaman</span></div>`;
+      }
+      if (file.sheets) {
+        infoRows += `<div class="detail-row"><span class="label"><i class="fas fa-table"></i> Lembar Kerja</span><span class="value">${file.sheets} sheet</span></div>`;
+      }
+      if (file.duration) {
+        infoRows += `<div class="detail-row"><span class="label"><i class="fas fa-stopwatch"></i> Durasi</span><span class="value">${file.duration}</span></div>`;
+      }
+      if (file.resolution) {
+        infoRows += `<div class="detail-row"><span class="label"><i class="fas fa-film"></i> Resolusi</span><span class="value">${file.resolution}</span></div>`;
+      }
+      if (file.files) {
+        infoRows += `<div class="detail-row"><span class="label"><i class="fas fa-folder"></i> Jumlah File</span><span class="value">${file.files} file</span></div>`;
+      }
+
+      infoRows += `<div class="detail-row"><span class="label"><i class="fas fa-fingerprint"></i> ID File</span><span class="value">#FIL-${String(file.id).padStart(4, '0')}</span></div>`;
+
+      detailBody.innerHTML = `
+        ${previewHTML}
+        <div class="detail-filename">${file.name}</div>
+        <div class="detail-section">
+          <div class="detail-section-title">Informasi File</div>
+          ${infoRows}
+        </div>
+        ${file.alt ? `
+        <div class="detail-section">
+          <div class="detail-section-title">Deskripsi Alternatif</div>
+          <p style="font-size:13px;color:var(--fg-muted);line-height:1.6;">${file.alt}</p>
+        </div>` : ''}
+        <div class="detail-section">
+          <div class="detail-section-title">Lokasi Penyimpanan</div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--fg-muted);font-family:monospace;word-break:break-all;">
+            /uploads/${file.type === 'image' ? 'images' : file.type === 'document' ? 'documents' : file.type === 'video' ? 'videos' : 'archives'}/${file.name}
+          </div>
+        </div>
+      `;
+    }
+
+    // === Buka/tutup detail ===
+    function openDetail(fileId) {
+      const file = filesData.find(f => f.id === fileId);
+      if (!file) return;
+      selectedFileId = fileId;
+      renderDetail(file);
+      detailPanel.classList.add('open');
+      mainArea.classList.add('detail-open');
+      renderFiles();
+    }
+
+    function closeDetail() {
+      selectedFileId = null;
+      detailPanel.classList.remove('open');
+      mainArea.classList.remove('detail-open');
+      renderFiles();
+    }
+
+    // === Toast ===
+    function showToast(message, type = 'success') {
+      const iconMap = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<i class="fas ${iconMap[type]}"></i><span>${message}</span>`;
+      toastContainer.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // === Event: klik file ===
+    filesGrid.addEventListener('click', (e) => {
+      if (e.target.closest('.file-checkbox')) return;
+      const card = e.target.closest('.file-card');
+      if (!card) return;
+      const id = parseInt(card.dataset.id);
+      if (selectedFileId === id) {
+        closeDetail();
+      } else {
+        openDetail(id);
+      }
+    });
+
+    filesGrid.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const card = e.target.closest('.file-card');
+        if (card) {
+          e.preventDefault();
+          openDetail(parseInt(card.dataset.id));
+        }
+      }
+    });
+
+    // Checkbox
+    filesGrid.addEventListener('click', (e) => {
+      const cb = e.target.closest('.file-checkbox');
+      if (!cb) return;
+      e.stopPropagation();
+      const id = parseInt(cb.dataset.check);
+      if (selectedFileId === id) {
+        closeDetail();
+      } else {
+        openDetail(id);
+      }
+    });
+
+    detailClose.addEventListener('click', closeDetail);
+
+    // === Filter ===
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.filter-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        currentFilter = tab.dataset.filter;
+        renderFiles();
+      });
+    });
+
+    // === View toggle ===
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentView = btn.dataset.view;
+        renderFiles();
+      });
+    });
+
+    // === Sort ===
+    sortSelect.addEventListener('change', () => {
+      currentSort = sortSelect.value;
+      renderFiles();
+    });
+
+    // === Search ===
+    let searchTimeout;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        searchQuery = searchInput.value.trim();
+        renderFiles();
+      }, 200);
+    });
+
+    // === Upload modal ===
+    document.getElementById('btnUpload').addEventListener('click', () => {
+      uploadOverlay.classList.add('show');
+      uploadProgress.classList.remove('show');
+    });
+
+    document.getElementById('uploadCancel').addEventListener('click', () => {
+      uploadOverlay.classList.remove('show');
+    });
+
+    uploadOverlay.addEventListener('click', (e) => {
+      if (e.target === uploadOverlay) uploadOverlay.classList.remove('show');
+    });
+
+    document.getElementById('browseLink').addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+
+    uploadZone.addEventListener('click', (e) => {
+      if (!e.target.closest('.browse-link')) fileInput.click();
+    });
+
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => { e.preventDefault(); uploadZone.classList.remove('dragover'); simulateUpload(); });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) simulateUpload();
+    });
+
+    function simulateUpload() {
+      uploadProgress.classList.add('show');
+      let pct = 0;
+      const interval = setInterval(() => {
+        pct += Math.random() * 15 + 5;
+        if (pct >= 100) {
+          pct = 100;
+          clearInterval(interval);
+          progressText.textContent = 'Selesai! Menutup...';
+          setTimeout(() => {
+            uploadOverlay.classList.remove('show');
+            fileInput.value = '';
+            progressFill.style.width = '0%';
+            showToast('File berhasil diunggah', 'success');
+          }, 600);
+        } else {
+          progressText.textContent = `Mengunggah... ${Math.round(pct)}%`;
+        }
+        progressFill.style.width = pct + '%';
+      }, 200);
+    }
+
+    // === Aksi detail panel ===
+    document.getElementById('btnDownload').addEventListener('click', () => {
+      const file = filesData.find(f => f.id === selectedFileId);
+      if (file) showToast(`Mengunduh "${file.name}"...`, 'info');
+    });
+
+    document.getElementById('btnCopyLink').addEventListener('click', () => {
+      const file = filesData.find(f => f.id === selectedFileId);
+      if (file) {
+        const path = `/uploads/${file.type === 'image' ? 'images' : file.type === 'document' ? 'documents' : file.type === 'video' ? 'videos' : 'archives'}/${file.name}`;
+        navigator.clipboard.writeText(path).then(() => {
+          showToast('Path file berhasil disalin', 'success');
+        }).catch(() => {
+          showToast('Gagal menyalin path', 'error');
+        });
+      }
+    });
+
+    // Hapus
+    let deleteTargetId = null;
+
+    document.getElementById('btnDelete').addEventListener('click', () => {
+      deleteTargetId = selectedFileId;
+      const file = filesData.find(f => f.id === deleteTargetId);
+      if (file) {
+        document.getElementById('confirmText').textContent = `"${file.name}" akan dihapus secara permanen dan tidak dapat dikembalikan.`;
+      }
+      confirmOverlay.classList.add('show');
+    });
+
+    document.getElementById('confirmCancel').addEventListener('click', () => {
+      confirmOverlay.classList.remove('show');
+      deleteTargetId = null;
+    });
+
+    confirmOverlay.addEventListener('click', (e) => {
+      if (e.target === confirmOverlay) {
+        confirmOverlay.classList.remove('show');
+        deleteTargetId = null;
+      }
+    });
+
+    document.getElementById('confirmDelete').addEventListener('click', () => {
+      if (deleteTargetId !== null) {
+        const idx = filesData.findIndex(f => f.id === deleteTargetId);
+        if (idx !== -1) {
+          const name = filesData[idx].name;
+          filesData.splice(idx, 1);
+          closeDetail();
+          renderFiles();
+          showToast(`"${name}" berhasil dihapus`, 'success');
+        }
+      }
+      confirmOverlay.classList.remove('show');
+      deleteTargetId = null;
+    });
+
+    // === Keyboard: Escape ===
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (confirmOverlay.classList.contains('show')) {
+          confirmOverlay.classList.remove('show');
+          deleteTargetId = null;
+        } else if (uploadOverlay.classList.contains('show')) {
+          uploadOverlay.classList.remove('show');
+        } else if (detailPanel.classList.contains('open')) {
+          closeDetail();
+        }
+      }
+    });
+
+    // === Sidebar nav ===
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // === Init ===
+    renderFiles();
+  </script>
+</body>
+</html>

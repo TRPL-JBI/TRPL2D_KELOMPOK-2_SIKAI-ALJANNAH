@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Services\FileRenamer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AdminWebController extends Controller
 {
@@ -280,5 +281,32 @@ class AdminWebController extends Controller
         $page->delete();
 
         return redirect()->route('adminweb.pages')->with('success', 'Halaman "' . e($title) . '" berhasil dihapus.');
+    }
+
+    public function files()
+    {
+        $files = Media::whereNull('deleted_at')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('dashboard.adminweb.files.index', compact('files'));
+    }
+
+    public function destroyFile($id)
+    {
+        $media = Media::findOrFail($id);
+        $name = $media->file_name;
+        $media->delete();
+
+        return response()->json(['success' => true, 'message' => '"' . $name . '" berhasil dihapus.']);
+    }
+
+    public function restoreFile($id)
+    {
+        $media = Media::withTrashed()->findOrFail($id);
+        $name = $media->file_name;
+        $media->restore();
+
+        return response()->json(['success' => true, 'message' => '"' . $name . '" berhasil dipulihkan.']);
     }
 }

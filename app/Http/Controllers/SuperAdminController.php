@@ -286,6 +286,53 @@ class SuperAdminController extends Controller
         ]);
     }
 
+    public function trashFiles()
+    {
+        $files = Media::onlyTrashed()
+            ->orderBy('deleted_at', 'desc')
+            ->get()
+            ->map(function ($m) {
+                $uploaderName = 'Tidak diketahui';
+                $cpUploadedBy = $m->custom_properties['uploaded_by'] ?? null;
+                if ($cpUploadedBy) {
+                    $uploader = User::find($cpUploadedBy);
+                    $uploaderName = $uploader?->nama ?? 'Tidak diketahui';
+                }
+                $modelShort = class_basename($m->model_type);
+                return (object) [
+                    'id' => $m->id,
+                    'nama_file' => $m->file_name,
+                    'source_label' => $modelShort . ' (' . $m->collection_name . ')',
+                    'uploader_nama' => $uploaderName,
+                    'size' => $m->size ?? 0,
+                    'mime_type' => $m->mime_type ?? '-',
+                    'deleted_at' => $m->deleted_at,
+                    'download_url' => route('media.download', $m->id),
+                ];
+            });
+
+        return view('dashboard.superadmin.file-trash', compact('files'));
+    }
+
+    public function restoreFile($id)
+    {
+        $media = Media::onlyTrashed()->findOrFail($id);
+        $name = $media->file_name;
+        $media->restore();
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'restore',
+            'deskripsi' => 'Memulihkan file yang dihapus: ' . $name,
+            'modul' => 'File',
+            'referensi_id' => $media->id,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+
+        return redirect('/superadmin/file/trash')->with('success', 'File "' . $name . '" berhasil dipulihkan.');
+    }
+
     private function klasifikasikanEkstensi(string $extension): string
     {
         $ekstensiDiterima = config('file-pemilah.diterima', []);
