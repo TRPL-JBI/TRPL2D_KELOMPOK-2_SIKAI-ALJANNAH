@@ -2,10 +2,9 @@
 
 namespace App\Filament\RichEditor;
 
-use Filament\Actions\Action;
 use Filament\Forms\Components\RichEditor\RichEditorTool;
 use Filament\Forms\Components\RichEditor\Plugins\Contracts\RichContentPlugin;
-use Tiptap\Core\Extension;
+use Filament\Support\Icons\Heroicon;
 
 class FileEmbedPlugin implements RichContentPlugin
 {
@@ -16,12 +15,20 @@ class FileEmbedPlugin implements RichContentPlugin
 
     public function getTipTapJsExtensions(): array
     {
-        return [asset('js/extension-file-embed.js')];
+        return [
+            asset('js/extension-file-embed.js'),
+        ];
     }
 
     public function getEditorTools(): array
     {
-        return [];
+        return [
+            RichEditorTool::make('mediaLibrary')
+                ->label('Media Library')
+                ->icon(Heroicon::Photo)
+                ->hiddenLabel()
+                ->jsHandler('FilamentMediaLibrary.openForEditor({ getEditor: () => $getEditor() })'),
+        ];
     }
 
     public function getEditorActions(): array

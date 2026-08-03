@@ -292,6 +292,49 @@ class AdminWebController extends Controller
         return view('dashboard.adminweb.files.index', compact('files'));
     }
 
+    public function mediaLibrary(Request $request)
+    {
+        $search = trim((string) $request->get('search'));
+
+        $mediaQuery = Media::whereNull('deleted_at');
+
+        if ($search !== '') {
+            $mediaQuery->where(function ($q) use ($search) {
+                $q->where('file_name', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('custom_properties', 'like', "%{$search}%");
+            });
+        }
+
+        $media = $mediaQuery
+            ->orderBy('created_at', 'desc')
+            ->limit(300)
+            ->get();
+
+        $items = $media->map(function (Media $file) {
+            $custom = $file->custom_properties ?? [];
+            $mime = $file->mime_type ?? '';
+
+            return [
+                'id' => $file->getKey(),
+                'name' => $file->file_name,
+                'original_name' => $file->name ?: $file->file_name,
+                'url' => $file->getUrl(),
+                'mime_type' => $mime,
+                'extension' => $file->extension ?: strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION)),
+                'is_image' => str_starts_with($mime, 'image/'),
+                'uploaded_by' => $custom['uploaded_by'] ?? ($custom['uploaded_by'] ?? null),
+                'created_at' => optional($file->created_at)->toIso8601String(),
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+            'count' => $items->count(),
+        ]);
+    }
+
     public function destroyFile($id)
     {
         $media = Media::findOrFail($id);

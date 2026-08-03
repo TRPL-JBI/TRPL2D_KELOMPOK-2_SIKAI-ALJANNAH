@@ -188,6 +188,7 @@ Route::middleware(['auth', 'role:adminweb'])->group(function () {
     Route::put('/adminweb/menus/{id}/toggle', [MenuController::class, 'toggle'])->name('adminweb.menus.toggle');
 
     Route::get('/adminweb/files', [AdminWebController::class, 'files'])->name('adminweb.files');
+    Route::get('/adminweb/files/library', [AdminWebController::class, 'mediaLibrary'])->name('adminweb.files.library');
     Route::delete('/adminweb/files/{id}', [AdminWebController::class, 'destroyFile'])->name('adminweb.files.destroy');
     Route::post('/adminweb/files/{id}/restore', [AdminWebController::class, 'restoreFile'])->name('adminweb.files.restore');
 });
@@ -199,3 +200,11 @@ Route::get('/spatie-media/{id}', [FileController::class, 'serveSpatieMedia'])->n
 
 // Catch-all: intercept legacy /storage/* paths after symlink removal
 Route::get('/storage/{path}', [FileController::class, 'serveStorage'])->where('path', '.*');
+
+// TEMP-DEBUG: real-page editor test (remove after fix)
+use App\Models\User as _DebugUser;
+Route::get('/dev/test-editor', function () {
+    \Illuminate\Support\Facades\Auth::loginUsingId(6);
+    \Illuminate\Support\Facades\Auth::shouldUse('web');
+    return view('dev.editor-probe', ['post' => \App\Models\Post::find(6)]);
+})->name('dev.test-editor');

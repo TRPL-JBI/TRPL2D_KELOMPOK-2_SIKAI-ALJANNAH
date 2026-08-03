@@ -16,6 +16,7 @@
         .btn-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: btnSpin .6s linear infinite; vertical-align: middle; margin-right: 6px; }
         @keyframes btnSpin { to { transform: rotate(360deg); } }
     </style>
+    <script src="{{ asset('js/media-library.js') }}" defer></script>
     @livewireStyles
     @stack('styles')
     <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js')}</script>

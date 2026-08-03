@@ -4,7 +4,9 @@ namespace App\Livewire;
 
 use App\Filament\RichEditor\FileEmbedPlugin;
 use App\Models\Category;
+use App\Models\FileOrganisasi;
 use App\Models\Post;
+use App\Services\FileRenamer;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\RichEditor;
@@ -13,6 +15,7 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Log;
 
@@ -60,6 +63,29 @@ class PostEditor extends Component implements HasActions, HasForms
         }
     }
 
+    private function persistEditorAttachment(TemporaryUploadedFile $file): int
+    {
+        $originalName = $file->getClientOriginalName();
+        $extension = strtolower($file->getClientOriginalExtension());
+        $kategori = in_array($extension, config('file-pemilah.diterima', []), true) ? 'diterima' : 'mencurigakan';
+
+        $fileRecord = FileOrganisasi::create([
+            'nama_file' => $originalName,
+            'file_path' => '',
+            'kategori' => $kategori,
+            'status' => 'aktif',
+            'uploaded_by' => auth()->id(),
+        ]);
+
+        $fileRecord
+            ->addMedia($file->getRealPath())
+            ->withCustomProperties(['uploaded_by' => auth()->id()])
+            ->usingFileName(FileRenamer::rename($originalName))
+            ->toMediaCollection('uploads');
+
+        return (int) $fileRecord->getFirstMedia('uploads')->id;
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
@@ -68,11 +94,25 @@ class PostEditor extends Component implements HasActions, HasForms
                     ->hiddenLabel()
                     ->required()
                     ->live()
-                    ->fileAttachments('post-attachments', config('filesystems.default'))
+                    ->fileAttachments(true)
+                    ->fileAttachmentsAcceptedFileTypes([
+                        'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
+                        'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                        'text/plain', 'text/csv',
+                    ])
+                    ->saveUploadedFileAttachmentUsing(
+                        fn (TemporaryUploadedFile $file): string => (string) $this->persistEditorAttachment($file),
+                    )
+                    ->getFileAttachmentUrlUsing(
+                        fn (string $file): ?string => filled($file) ? route('media.spatie', $file) : null,
+                    )
                     ->plugins([new FileEmbedPlugin])
                     ->toolbarButtons([
                         ['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', 'link', 'h2', 'h3', 'h4', 'alignStart', 'alignCenter', 'alignEnd', 'blockquote', 'codeBlock', 'bulletList', 'orderedList'],
                         ['attachFiles', 'table', 'tableAddColumnBefore', 'tableAddColumnAfter', 'tableDeleteColumn', 'tableAddRowBefore', 'tableAddRowAfter', 'tableDeleteRow', 'tableMergeCells', 'tableSplitCell', 'tableToggleHeaderRow', 'tableToggleHeaderCell', 'tableDelete'],
+                        ['mediaLibrary'],
                         ['undo', 'redo'],
                     ])
                     ->floatingToolbars([]),
@@ -84,7 +124,8 @@ class PostEditor extends Component implements HasActions, HasForms
     {
         $this->validate();
 
-        $rawContent = $this->data['content'] ?? '';
+        $state = $this->form->getState();
+        $rawContent = $state['content'] ?? '';
         if (is_array($rawContent)) {
             $renderer = app(\Filament\Forms\Components\RichEditor\RichContentRenderer::class, ['content' => $rawContent]);
             $content = $renderer->getEditor()->getHTML();

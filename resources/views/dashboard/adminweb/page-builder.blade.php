@@ -395,6 +395,7 @@ select.prop-input{appearance:none;}
   </div>
 </div>
 
+<script src="{{ asset('js/media-library.js') }}"></script>
 <script>
 (function(){
   'use strict';
@@ -846,7 +847,7 @@ select.prop-input{appearance:none;}
       html += field('Tautan (href)', '<input class="prop-input" id="p_href" value="'+escapeAttr(p.href)+'">');
     }
     if(node.type==='image'){
-      html += field('URL Gambar', '<div style="display:flex;gap:6px;"><input class="prop-input" id="p_src" value="'+escapeAttr(p.src)+'" style="flex:1;"><button class="ghost-btn" id="p_upload" type="button" style="flex-shrink:0;height:32px;padding:0 10px;font-size:11px;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Upload</button></div>');
+      html += field('URL Gambar', '<div style="display:flex;gap:6px;"><input class="prop-input" id="p_src" value="'+escapeAttr(p.src)+'" style="flex:1;"><button class="ghost-btn" id="p_upload" type="button" style="flex-shrink:0;height:32px;padding:0 10px;font-size:11px;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Upload</button><button class="ghost-btn" id="p_media" type="button" style="flex-shrink:0;height:32px;padding:0 10px;font-size:11px;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg> Media</button></div>');
       html += field('Teks Alternatif (alt)', '<input class="prop-input" id="p_alt" value="'+escapeAttr(p.alt)+'">');
     }
     if(node.type==='list'){
@@ -962,6 +963,21 @@ select.prop-input{appearance:none;}
         });
       });
       input.click();
+    });
+    if(byId('p_media')) byId('p_media').addEventListener('click', function(){
+      if(!window.FilamentMediaLibrary || !window.FilamentMediaLibrary.pick){
+        showToast('Media Library belum dimuat');
+        return;
+      }
+      window.FilamentMediaLibrary.pick({
+        title: 'Pilih Gambar dari Media',
+        onSelect: function(item){
+          pushHistory();
+          p.src = item.url;
+          render();
+          showToast('Media disisipkan');
+        }
+      });
     });
     if(byId('p_items')) byId('p_items').addEventListener('change', e=> commit(()=> p.items = e.target.value.split('\n').filter(Boolean)));
     if(byId('p_size')) byId('p_size').addEventListener('change', e=> commit(()=> p.size = e.target.value));

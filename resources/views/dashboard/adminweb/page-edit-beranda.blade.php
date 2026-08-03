@@ -394,6 +394,10 @@
                         <div style="margin-top:8px;">
                             <input type="hidden" name="services[items][{{ $i }}][existing_image]" value="{{ $svc['image'] ?? '' }}">
                             <input type="file" name="services[items][{{ $i }}][image_file]" accept="image/png,image/jpeg,image/gif,image/svg+xml,image/webp" style="width:100%;padding:8px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fff;box-sizing:border-box;">
+                            <button type="button" class="btn-pick-media" style="background:#f0f9f7;color:#16423c;border:1.5px solid #16423c;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;margin-top:8px;">
+                                <span class="material-icons" style="font-size:16px;vertical-align:-3px;">photo_library</span> Pilih dari Media
+                            </button>
+                            <div class="beranda-preview"></div>
                             @if(!empty($svc['image']))
                             <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
                                 @if(is_numeric($svc['image']))
@@ -428,6 +432,10 @@
                         <div style="margin-top:8px;">
                             <input type="hidden" name="services[items][__INDEX__][existing_image]" value="">
                             <input type="file" name="services[items][__INDEX__][image_file]" accept="image/png,image/jpeg,image/gif,image/svg+xml,image/webp" style="width:100%;padding:8px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fff;box-sizing:border-box;">
+                            <button type="button" class="btn-pick-media" style="background:#f0f9f7;color:#16423c;border:1.5px solid #16423c;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;margin-top:8px;">
+                                <span class="material-icons" style="font-size:16px;vertical-align:-3px;">photo_library</span> Pilih dari Media
+                            </button>
+                            <div class="beranda-preview"></div>
                         </div>
                     </div>
                 </template>
@@ -460,6 +468,10 @@
                             <div>
                                 <input type="hidden" name="member_benefits[items][{{ $i }}][existing_image]" value="{{ $mb['image'] ?? '' }}">
                                 <input type="file" name="member_benefits[items][{{ $i }}][image_file]" accept="image/png,image/jpeg,image/gif,image/svg+xml,image/webp" style="width:100%;padding:8px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fff;box-sizing:border-box;">
+                                <button type="button" class="btn-pick-media" style="background:#f0f9f7;color:#16423c;border:1.5px solid #16423c;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;margin-top:8px;">
+                                    <span class="material-icons" style="font-size:16px;vertical-align:-3px;">photo_library</span> Pilih dari Media
+                                </button>
+                                <div class="beranda-preview"></div>
                                 @if(!empty($mb['image']))
                                 <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
                                     @if(is_numeric($mb['image']))
@@ -493,6 +505,10 @@
                             <div>
                                 <input type="hidden" name="member_benefits[items][__INDEX__][existing_image]" value="">
                                 <input type="file" name="member_benefits[items][__INDEX__][image_file]" accept="image/png,image/jpeg,image/gif,image/svg+xml,image/webp" style="width:100%;padding:8px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fff;box-sizing:border-box;">
+                                <button type="button" class="btn-pick-media" style="background:#f0f9f7;color:#16423c;border:1.5px solid #16423c;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;margin-top:8px;">
+                                    <span class="material-icons" style="font-size:16px;vertical-align:-3px;">photo_library</span> Pilih dari Media
+                                </button>
+                                <div class="beranda-preview"></div>
                             </div>
                         </div>
                     </div>
@@ -633,4 +649,36 @@ function updateBenefitLabels() {
     });
 }
 </script>
+
+@push('scripts')
+<script>
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.btn-pick-media');
+    if (!btn) return;
+
+    var row = btn.closest('.dynamic-item-row');
+    if (!row) return;
+
+    var hidden = row.querySelector('input[name*="existing_image"]');
+    var preview = row.querySelector('.beranda-preview');
+
+    if (!window.FilamentMediaLibrary || !window.FilamentMediaLibrary.pick) {
+        alert('Media Library belum dimuat. Muat ulang halaman lalu coba lagi.');
+        return;
+    }
+
+    window.FilamentMediaLibrary.pick({
+        title: 'Pilih dari Media',
+        onSelect: function (item) {
+            if (hidden) hidden.value = item.url;
+            if (preview) {
+                preview.innerHTML = '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
+                    '<img src="' + item.url + '" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #e0e0e0;">' +
+                    '<span style="font-size:11px;color:#6b7280;">Media terpilih</span></div>';
+            }
+        }
+    });
+});
+</script>
+@endpush
 @endsection
