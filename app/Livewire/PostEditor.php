@@ -156,6 +156,7 @@ class PostEditor extends Component implements HasActions, HasForms
                 (new \Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig)
                     ->allowSafeElements()
                     ->allowRelativeLinks()
+                    ->allowRelativeMedias()
                     ->allowAttribute('class', allowedElements: '*')
                     ->allowAttribute('data-color', allowedElements: '*')
                     ->allowAttribute('data-cols', allowedElements: '*')

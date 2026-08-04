@@ -195,17 +195,19 @@
         });
 
         renderMedia(body, '', onSelect, countEl);
-        return close;
     }
 
     function pick(options) {
-        return openModal(options);
+        // NOT returning anything: if an `x-on:click` expression receives a function
+        // value, Alpine auto-invokes it (shouldAutoEvaluateFunctions), which would
+        // immediately re-close the modal. Deliberately return undefined here.
+        openModal(options);
     }
 
     function openForEditor(options) {
         const getEditor = options.getEditor || (() => null);
 
-        return openModal({
+        openModal({
             title: options.title || 'Sisipkan dari Media',
             onSelect(item) {
                 const editor = getEditor();
