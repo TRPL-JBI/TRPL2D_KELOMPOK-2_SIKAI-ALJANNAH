@@ -7,10 +7,13 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "barryvdh/laravel-dompdf": "^3.1",
         "filament/filament": "^5.3",
+        "kstmostofa/laravel-whatsapp": "*",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "openspout/openspout": "*",
+        "phpoffice/phpword": "^1.4",
         "spatie/laravel-medialibrary": "*",
         "te7a-houdini/laravel-trix": "^3.1"
     },

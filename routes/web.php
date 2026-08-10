@@ -12,6 +12,7 @@ use App\Http\Controllers\EditorUploadController;
 use App\Http\Controllers\BendaharaController;
 use App\Http\Controllers\KetuaController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\WhatsAppController;
 
 use App\Models\Page;
 
@@ -191,6 +192,14 @@ Route::middleware(['auth', 'role:adminweb'])->group(function () {
     Route::get('/adminweb/files/library', [AdminWebController::class, 'mediaLibrary'])->name('adminweb.files.library');
     Route::delete('/adminweb/files/{id}', [AdminWebController::class, 'destroyFile'])->name('adminweb.files.destroy');
     Route::post('/adminweb/files/{id}/restore', [AdminWebController::class, 'restoreFile'])->name('adminweb.files.restore');
+
+    Route::get('/adminweb/whatsapp', [WhatsAppController::class, 'index'])->name('adminweb.whatsapp');
+    Route::get('/adminweb/whatsapp/refresh', [WhatsAppController::class, 'refresh'])->name('adminweb.whatsapp.refresh');
+    Route::post('/adminweb/whatsapp/connect-qr', [WhatsAppController::class, 'connectQr'])->name('adminweb.whatsapp.connect-qr');
+    Route::post('/adminweb/whatsapp/send', [WhatsAppController::class, 'send'])->name('adminweb.whatsapp.send');
+    Route::post('/adminweb/whatsapp/logout', [WhatsAppController::class, 'logout'])->name('adminweb.whatsapp.logout');
+    Route::post('/adminweb/whatsapp/server/start', [WhatsAppController::class, 'startServer'])->name('adminweb.whatsapp.server-start');
+    Route::post('/adminweb/whatsapp/server/stop', [WhatsAppController::class, 'stopServer'])->name('adminweb.whatsapp.server-stop');
 });
 
 // Public file serving — zero-trust (download only)
