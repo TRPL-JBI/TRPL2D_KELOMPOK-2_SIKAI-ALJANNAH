@@ -268,6 +268,7 @@
                     <div class="form-group">
                         <label>Nomor Tujuan</label>
                         <input type="text" name="to" placeholder="6281234567890" required>
+                        <small style="display:block;font-size:12px;color:var(--primary-400);margin-top:6px;">Kode negara + nomor, tanpa 0 di depan. Contoh: 6281234567890 (bukan 0812...)</small>
                     </div>
                     <div class="form-group">
                         <label>Pesan</label>

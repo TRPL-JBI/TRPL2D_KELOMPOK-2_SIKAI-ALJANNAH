@@ -107,12 +107,41 @@ class WhatsAppService
     public function send(string $to, string $text): array
     {
         try {
-            $result = WhatsApp::web(self::SESSION_ID)->messages()->sendText($to, $text);
+            $result = WhatsApp::web(self::SESSION_ID)->messages()->sendText($this->normalizeNumber($to), $text);
 
             return is_array($result) ? $result : ['success' => true];
         } catch (\Throwable $e) {
             return ['error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Normalisasi nomor ke format WA ID (kode negara Indonesia + tanpa "0" awal).
+     *
+     * 081234567890  → 6281234567890
+     * +6281234567890 → 6281234567890
+     * 6281234567890  → 6281234567890
+     * 62812...@c.us  → dibiarkan (sudah WA ID)
+     */
+    protected function normalizeNumber(string $to): string
+    {
+        $to = trim($to);
+
+        if ($to === '' || str_contains($to, '@')) {
+            return $to;
+        }
+
+        $digits = preg_replace('/\D+/', '', $to);
+
+        if ($digits === '') {
+            return $to;
+        }
+
+        if (str_starts_with($digits, '0')) {
+            return '62'.substr($digits, 1);
+        }
+
+        return $digits;
     }
 
     /**
