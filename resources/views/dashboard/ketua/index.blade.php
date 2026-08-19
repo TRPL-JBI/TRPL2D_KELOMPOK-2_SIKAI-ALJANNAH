@@ -114,6 +114,40 @@ body { background-color: #eef6f2; }
 .br-toast.error .material-symbols-outlined { color: #dc2626; }
 @media (max-width: 1200px) { .ketua-stat-cards { grid-template-columns: repeat(2, 1fr); } .ketua-two-col { grid-template-columns: 1fr; } }
 @media (max-width: 768px) { .ketua-stat-cards { grid-template-columns: 1fr; } .br-card-header { flex-direction: column; gap: 12px; } .br-search-box { max-width: 100%; } }
+.tt-card { margin-bottom: 24px; }
+.tt-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.tt-preview { width: 200px; height: 120px; border: 1.5px dashed #cbd5e1; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+.tt-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.tt-preview-empty { color: #9ca3af; font-size: 12px; text-align: center; padding: 12px; }
+.tt-controls { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 10px; }
+.tt-source-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.tt-btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; padding: 8px 18px; font-size: 12px; font-weight: 600; font-family: 'Poppins', sans-serif; cursor: pointer; transition: all 0.2s; border: none; }
+.tt-btn .material-symbols-outlined { font-size: 16px; }
+.tt-btn-primary { background: #0d4f46; color: #fff; }
+.tt-btn-primary:hover { background: #16423c; transform: scale(1.03); }
+.tt-btn-outline { background: #fff; color: #0d4f46; border: 1.5px solid #0d4f46; }
+.tt-btn-outline:hover { background: #f0fdf4; }
+.tt-btn-disabled { opacity: 0.5; cursor: not-allowed; }
+.tt-hint { font-size: 12px; color: #6b7280; line-height: 1.6; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f3f4f6; }
+.tt-status { display: inline-flex; align-items: center; gap: 6px; background: #d1fae5; color: #065f46; border-radius: 20px; padding: 5px 14px; font-size: 11px; font-weight: 600; }
+.tt-status .material-symbols-outlined { font-size: 15px; }
+.tt-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+.tt-modal-overlay.active { opacity: 1; visibility: visible; }
+.tt-modal { background: #fff; border-radius: 18px; padding: 24px; max-width: 480px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); transform: scale(0.9); transition: transform 0.3s ease; }
+.tt-modal-overlay.active .tt-modal { transform: scale(1); }
+.tt-modal-title { font-size: 17px; font-weight: 700; color: #0d4f46; margin-bottom: 14px; }
+.tt-modal-stage { background: #0f1a17; border-radius: 12px; overflow: hidden; height: 320px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.tt-modal-stage video, .tt-modal-stage canvas { width: 100%; height: 100%; object-fit: contain; }
+.tt-modal-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.tt-cam-btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; padding: 8px 20px; font-size: 12px; font-weight: 600; font-family: 'Poppins', sans-serif; cursor: pointer; border: none; transition: all 0.2s; }
+.tt-cam-btn .material-symbols-outlined { font-size: 16px; }
+.tt-cam-capture { background: #0d4f46; color: #fff; }
+.tt-cam-capture:hover { background: #16423c; }
+.tt-cam-ghost { background: #f3f4f6; color: #374151; }
+.tt-cam-ghost:hover { background: #e5e7eb; }
+.tt-cam-use { background: #059669; color: #fff; }
+.tt-cam-use:hover { background: #047857; }
+.tt-cam-error { display: none; text-align: center; color: #dc2626; font-size: 12px; margin-top: 10px; line-height: 1.5; }
 </style>
 @endpush
 @section('content')
@@ -121,6 +155,57 @@ body { background-color: #eef6f2; }
 <div class="ketua-stat-cards">@foreach($stats as $s)
     <div class="ketua-stat-card"><div class="ketua-stat-icon {{ $s['color'] }}"><span class="material-symbols-outlined">{{ $s['icon'] }}</span></div><div class="ketua-stat-info"><div class="ketua-stat-value">{{ $s['value'] }}</div><div class="ketua-stat-label">{{ $s['label'] }}</div></div></div>
 @endforeach</div>
+<div class="ketua-card tt-card">
+    <div class="ketua-card-title">Tanda Tangan</div>
+    <div class="tt-row">
+        <div class="tt-preview" id="ttPreviewBox">
+            @if($signature)
+                <img src="{{ $signature }}" alt="Tanda tangan saat ini" id="ttPreviewImg">
+            @else
+                <div class="tt-preview-empty" id="ttPreviewEmpty">Belum ada tanda tangan</div>
+            @endif
+        </div>
+        <div class="tt-controls">
+            <div class="tt-status" id="ttStatusWrap" style="{{ $signature ? '' : 'display:none;' }}">
+                <span class="material-symbols-outlined">verified</span>
+                <span id="ttStatusText">Tanda tangan terkirim</span>
+            </div>
+            <div class="tt-source-btns" id="ttSourceBtns">
+                <label class="tt-btn tt-btn-outline" id="ttPickBtn" style="cursor:pointer;">
+                    <span class="material-symbols-outlined">upload_file</span> Pilih Foto
+                    <input type="file" id="ttFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                </label>
+                <button type="button" class="tt-btn tt-btn-outline" id="ttCameraBtn">
+                    <span class="material-symbols-outlined">photo_camera</span> Ambil Foto
+                </button>
+                <button type="button" class="tt-btn tt-btn-primary" id="ttSubmitBtn" disabled>
+                    <span class="material-symbols-outlined">send</span> Kirim Tanda Tangan
+                </button>
+                <button type="button" class="tt-btn tt-btn-outline" id="ttChangeBtn" style="{{ $signature ? '' : 'display:none;' }}">
+                    <span class="material-symbols-outlined">swap_horiz</span> Ganti Tanda Tangan
+                </button>
+            </div>
+            <input type="hidden" id="ttDataUrl">
+        </div>
+    </div>
+    <div class="tt-hint">Disarankan menggunakan foto yang sudah ada. Lebih baik lagi jika foto tanda tangan sudah diedit agar lebih jelas.</div>
+</div>
+<div class="tt-modal-overlay" id="ttCameraModal">
+    <div class="tt-modal">
+        <div class="tt-modal-title">Ambil Foto Tanda Tangan</div>
+        <div class="tt-modal-stage">
+            <video id="ttCamVideo" autoplay playsinline></video>
+            <canvas id="ttCamCanvas" style="display:none;"></canvas>
+        </div>
+        <div class="tt-modal-actions">
+            <button type="button" class="tt-cam-btn tt-cam-capture" id="ttCaptureBtn"><span class="material-symbols-outlined">photo_camera</span> Jepret</button>
+            <button type="button" class="tt-cam-btn tt-cam-ghost" id="ttRetakeBtn" style="display:none;"><span class="material-symbols-outlined">refresh</span> Ulangi</button>
+            <button type="button" class="tt-cam-btn tt-cam-use" id="ttUseBtn" style="display:none;"><span class="material-symbols-outlined">check</span> Gunakan Foto Ini</button>
+            <button type="button" class="tt-cam-btn tt-cam-ghost" id="ttCloseCamBtn"><span class="material-symbols-outlined">close</span> Tutup</button>
+        </div>
+        <div class="tt-cam-error" id="ttCamError"></div>
+    </div>
+</div>
 <div class="ketua-two-col">
     <div class="ketua-card"><div class="ketua-card-title">Arus Keuangan</div><div class="ketua-chart-container"><canvas id="financeChart"></canvas></div><div class="ketua-chart-footer">Data Keuangan Tahun 2026</div></div>
     <div class="ketua-card"><div class="ketua-card-title">Aktivitas Terbaru</div><div class="ketua-activities-list">@forelse($activities as $a)
@@ -167,5 +252,61 @@ function handleApprove(){if(pendingId<0)return;var btn=document.querySelector('t
 function handleReject(){if(pendingId<0)return;var btn=document.querySelector('tr[data-id="'+pendingId+'"] .br-btn-izinkan');if(btn)btn.outerHTML='<span class="br-status-badge rejected"><span class="material-symbols-outlined">cancel</span> Ditolak</span>';fetch('/ketua/izin/'+pendingId+'/reject',{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}}).then(function(r){return r.json()}).then(function(res){if(res.success)showToast('Permintaan berhasil ditolak','error');else showToast(res.message||'Gagal','error')}).catch(function(){showToast('Terjadi kesalahan','error')});closeModal()}
 document.getElementById('izinModal').addEventListener('click',function(e){if(e.target===this)closeModal()});
 (function(){var s=document.getElementById('searchIzin');if(!s)return;var r=document.querySelectorAll('#izinTable tbody tr:not(.br-table-empty)'),e=document.getElementById('izinEmpty'),b=document.getElementById('brRefreshBtn'),l=document.getElementById('brLastUpdate');function f(){var q=s.value.toLowerCase().trim(),v=0;r.forEach(function(x){if(q===''||x.textContent.toLowerCase().indexOf(q)!==-1){x.style.display='';v++}else x.style.display='none'});if(e)e.classList.toggle('show',v===0)}function u(){var n=new Date();if(l)l.textContent='Terakhir : '+String(n.getHours()).padStart(2,'0')+'.'+String(n.getMinutes()).padStart(2,'0')+'.'+String(n.getSeconds()).padStart(2,'0')}if(s)s.addEventListener('input',f);if(b)b.addEventListener('click',function(){b.classList.remove('spinning');void b.offsetWidth;b.classList.add('spinning');u();setTimeout(function(){b.classList.remove('spinning')},600)});u()})();
+</script>
+<script>
+(function(){
+    var previewBox=document.getElementById('ttPreviewBox'),previewImg=document.getElementById('ttPreviewImg'),previewEmpty=document.getElementById('ttPreviewEmpty'),fileInput=document.getElementById('ttFileInput'),dataUrlInput=document.getElementById('ttDataUrl'),submitBtn=document.getElementById('ttSubmitBtn'),pickBtn=document.getElementById('ttPickBtn'),cameraBtn=document.getElementById('ttCameraBtn'),changeBtn=document.getElementById('ttChangeBtn'),statusWrap=document.getElementById('ttStatusWrap');
+    var modal=document.getElementById('ttCameraModal'),video=document.getElementById('ttCamVideo'),canvas=document.getElementById('ttCamCanvas'),captureBtn=document.getElementById('ttCaptureBtn'),retakeBtn=document.getElementById('ttRetakeBtn'),useBtn=document.getElementById('ttUseBtn'),closeCamBtn=document.getElementById('ttCloseCamBtn'),camError=document.getElementById('ttCamError');
+    var stream=null,ctx=canvas.getContext('2d');
+
+    function setPreview(src){
+        if(!previewImg){previewImg=document.createElement('img');previewImg.id='ttPreviewImg';previewBox.appendChild(previewImg);}
+        previewImg.src=src;previewImg.style.display='';if(previewEmpty)previewEmpty.style.display='none';previewBox.style.borderStyle='solid';previewBox.style.borderColor='#d1fae5';
+    }
+    function clearData(){dataUrlInput.value='';fileInput.value='';submitBtn.disabled=true;submitBtn.classList.add('tt-btn-disabled');}
+    function refreshState(){
+        if(dataUrlInput.value||fileInput.files&&fileInput.files.length){submitBtn.disabled=false;submitBtn.classList.remove('tt-btn-disabled');}
+        else{submitBtn.disabled=true;submitBtn.classList.add('tt-btn-disabled');}
+    }
+    function stopStream(){if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null;}}
+    function closeModal(){stopStream();modal.classList.remove('active');video.style.display='';canvas.style.display='none';captureBtn.style.display='';retakeBtn.style.display='none';useBtn.style.display='none';camError.style.display='none';}
+
+    if(fileInput)fileInput.addEventListener('change',function(){if(!this.files||!this.files.length)return;var f=this.files[0];if(f.size>5*1024*1024){showToast('Ukuran foto maksimal 5MB','error');clearData();return;}var rd=new FileReader();rd.onload=function(e){dataUrlInput.value='';setPreview(e.target.result);refreshState();};rd.readAsDataURL(f);});
+
+    if(cameraBtn)cameraBtn.addEventListener('click',function(){
+        modal.classList.add('active');camError.style.display='none';
+        if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){camError.textContent='Kamera tidak didukung di browser ini. Gunakan tombol "Pilih Foto".';camError.style.display='block';return;}
+        navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(s){stream=s;video.srcObject=s;video.play().catch(function(){});}).catch(function(err){
+            camError.textContent='Tidak dapat mengakses kamera ('+(err&&err.name?err.name:'gagal')+'). Izinkan akses kamera atau gunakan tombol "Pilih Foto".';camError.style.display='block';
+        });
+    });
+
+    if(captureBtn)captureBtn.addEventListener('click',function(){
+        if(!video.videoWidth)return;
+        canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0,canvas.width,canvas.height);
+        video.style.display='none';canvas.style.display='block';captureBtn.style.display='none';retakeBtn.style.display='';useBtn.style.display='';
+    });
+    if(retakeBtn)retakeBtn.addEventListener('click',function(){video.style.display='';canvas.style.display='none';captureBtn.style.display='';retakeBtn.style.display='none';useBtn.style.display='none';});
+    if(useBtn)useBtn.addEventListener('click',function(){var d=canvas.toDataURL('image/png');dataUrlInput.value=d;fileInput.value='';setPreview(d);refreshState();closeModal();});
+    if(closeCamBtn)closeCamBtn.addEventListener('click',closeModal);
+    if(modal)modal.addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+    if(changeBtn)changeBtn.addEventListener('click',function(){changeBtn.style.display='none';statusWrap.style.display='none';clearData();});
+
+    if(submitBtn)submitBtn.addEventListener('click',function(){
+        if(submitBtn.disabled)return;
+        submitBtn.disabled=true;submitBtn.classList.add('tt-btn-disabled');
+        var fd=new FormData();
+        if(dataUrlInput.value)fd.append('foto_data_url',dataUrlInput.value);
+        else if(fileInput.files&&fileInput.files.length)fd.append('foto',fileInput.files[0]);
+        fetch('{{ route('ketua.tanda-tangan.store') }}',{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},body:fd})
+            .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+            .then(function(res){
+                if(res.ok&&res.j.success){showToast(res.j.message||'Tanda tangan berhasil disimpan','success');setTimeout(function(){window.location.reload();},900);}
+                else{submitBtn.disabled=false;submitBtn.classList.remove('tt-btn-disabled');showToast(res.j.message||'Gagal menyimpan tanda tangan','error');}
+            })
+            .catch(function(){submitBtn.disabled=false;submitBtn.classList.remove('tt-btn-disabled');showToast('Terjadi kesalahan saat mengirim','error');});
+    });
+})();
 </script>
 @endpush

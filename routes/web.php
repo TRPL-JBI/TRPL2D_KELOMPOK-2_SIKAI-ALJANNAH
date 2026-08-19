@@ -164,6 +164,7 @@ Route::middleware(['auth', 'role:ketua'])->group(function () {
     Route::get('/ketua/izin', [KetuaController::class, 'izin'])->name('ketua.izin');
     Route::post('/ketua/izin/{id}/approve', [KetuaController::class, 'approveIzin'])->name('ketua.izin.approve');
     Route::post('/ketua/izin/{id}/reject', [KetuaController::class, 'rejectIzin'])->name('ketua.izin.reject');
+    Route::post('/ketua/tanda-tangan', [KetuaController::class, 'storeTandaTangan'])->name('ketua.tanda-tangan.store');
 });
 
 Route::middleware(['auth', 'role:adminweb'])->group(function () {

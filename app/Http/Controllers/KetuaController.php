@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Anggota;
-use App\Models\Pemasukan;
-use App\Models\Pengeluaran;
-use App\Models\StokBarang;
 use App\Models\AsetKendaraan;
 use App\Models\KategoriPemasukan;
 use App\Models\KategoriPengeluaran;
 use App\Models\LogAktivitas;
+use App\Models\Pemasukan;
+use App\Models\Pengeluaran;
 use App\Models\PermintaanIzin;
+use App\Models\StokBarang;
 use Illuminate\Http\Request;
 
 class KetuaController extends Controller
@@ -35,7 +35,7 @@ class KetuaController extends Controller
             ->groupBy('bulan')
             ->pluck('total', 'bulan');
 
-        $chartLabels = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+        $chartLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
         $chartPemasukan = [];
         $chartPengeluaran = [];
         for ($b = 1; $b <= 12; $b++) {
@@ -47,17 +47,19 @@ class KetuaController extends Controller
 
         $requests = PermintaanIzin::with('user')->where('status', 'menunggu')->latest()->take(5)->get();
 
+        $signature = auth()->user()->tandaTanganDataUri();
+
         return view('dashboard.ketua.index', compact(
             'totalAnggota', 'totalPemasukan', 'totalPengeluaran', 'saldo', 'totalAset', 'pendingIzin',
             'chartLabels', 'chartPemasukan', 'chartPengeluaran',
-            'activities', 'requests'
+            'activities', 'requests', 'signature'
         ));
     }
 
     public function anggota(Request $request)
     {
         $anggota = Anggota::where('status', 'aktif')
-            ->when($request->search, fn($q, $s) => $q->where('nama', 'like', "%{$s}%"))
+            ->when($request->search, fn ($q, $s) => $q->where('nama', 'like', "%{$s}%"))
             ->latest()
             ->paginate(20);
 
@@ -74,14 +76,14 @@ class KetuaController extends Controller
         $pengeluaran = Pengeluaran::with('kategoriPengeluaran')->get();
 
         $transactions = collect()
-            ->merge($pemasukan->map(fn($p) => [
+            ->merge($pemasukan->map(fn ($p) => [
                 'tanggal' => $p->created_at->format('d/m/Y'),
                 'keterangan' => $p->keterangan ?? '',
                 'kategori' => 'Pemasukan',
                 'kategori_nama' => $p->kategoriPemasukan?->nama ?? '-',
                 'jumlah' => $p->jumlah,
             ]))
-            ->merge($pengeluaran->map(fn($p) => [
+            ->merge($pengeluaran->map(fn ($p) => [
                 'tanggal' => $p->created_at->format('d/m/Y'),
                 'keterangan' => $p->keterangan ?? '',
                 'kategori' => 'Pengeluaran',
@@ -93,8 +95,7 @@ class KetuaController extends Controller
 
         if ($request->search) {
             $s = $request->search;
-            $transactions = $transactions->filter(fn($t) =>
-                str_contains(strtolower($t['keterangan']), strtolower($s)) ||
+            $transactions = $transactions->filter(fn ($t) => str_contains(strtolower($t['keterangan']), strtolower($s)) ||
                 str_contains(strtolower($t['kategori_nama']), strtolower($s))
             )->values();
         }
@@ -117,7 +118,7 @@ class KetuaController extends Controller
     public function log(Request $request)
     {
         $logs = LogAktivitas::with('user')
-            ->when($request->search, fn($q, $s) => $q->where('deskripsi', 'like', "%{$s}%"))
+            ->when($request->search, fn ($q, $s) => $q->where('deskripsi', 'like', "%{$s}%"))
             ->latest()
             ->paginate(20);
 
@@ -149,14 +150,14 @@ class KetuaController extends Controller
             default => null,
         };
 
-        if (!$column) {
+        if (! $column) {
             return response()->json(['success' => false, 'message' => 'Field tidak dikenal.'], 400);
         }
 
         if ($izin->field_name === 'kategori') {
             $kategoriModel = $izin->target_table === 'pemasukan' ? KategoriPemasukan::class : KategoriPengeluaran::class;
             $kategori = $kategoriModel::where('nama', $izin->new_value)->first();
-            if (!$kategori) {
+            if (! $kategori) {
                 return response()->json(['success' => false, 'message' => 'Kategori tidak ditemukan.'], 400);
             }
             $target->{$column} = $kategori->id;
@@ -199,5 +200,117 @@ class KetuaController extends Controller
         ]);
 
         return response()->json(['success' => true, 'message' => 'Permintaan ditolak.']);
+    }
+
+    public function storeTandaTangan(Request $request)
+    {
+        $request->validate([
+            'foto' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'foto_data_url' => 'nullable|string',
+        ], [
+            'foto.image' => 'File harus berupa gambar.',
+            'foto.mimes' => 'Format gambar harus JPG, PNG, atau WebP.',
+            'foto.max' => 'Ukuran foto maksimal 5MB.',
+        ]);
+
+        $source = null;
+        $tempPath = null;
+
+        if ($request->hasFile('foto')) {
+            $source = $request->file('foto')->getRealPath();
+        } elseif ($request->filled('foto_data_url')) {
+            if (! preg_match('/^data:image\/(jpeg|png|webp);base64,(.+)$/s', $request->input('foto_data_url'), $m)) {
+                return response()->json(['success' => false, 'message' => 'Data foto tidak valid.'], 422);
+            }
+            $tempPath = tempnam(sys_get_temp_dir(), 'ttd').'.png';
+            file_put_contents($tempPath, base64_decode($m[2]));
+            $source = $tempPath;
+        } else {
+            return response()->json(['success' => false, 'message' => 'Pilih atau ambil foto tanda tangan terlebih dahulu.'], 422);
+        }
+
+        $path = $this->processSignatureImage($source);
+        if ($tempPath) {
+            @unlink($tempPath);
+        }
+
+        if (! $path) {
+            return response()->json(['success' => false, 'message' => 'Gagal memproses gambar. Coba foto lain.'], 422);
+        }
+
+        $user = $request->user();
+        $user->tanda_tangan = $path;
+        $user->save();
+
+        LogAktivitas::create([
+            'user_id' => $user->id,
+            'aksi' => 'kirim_tanda_tangan',
+            'deskripsi' => 'Ketua mengirim tanda tangan.',
+            'modul' => 'tanda_tangan',
+            'referensi_id' => $user->id,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Tanda tangan berhasil disimpan.']);
+    }
+
+    private function processSignatureImage(string $sourcePath): ?string
+    {
+        if (! is_readable($sourcePath) || ! function_exists('imagecreatefromjpeg')) {
+            return null;
+        }
+
+        $mime = mime_content_type($sourcePath);
+        $image = match ($mime) {
+            'image/jpeg' => @imagecreatefromjpeg($sourcePath),
+            'image/png' => @imagecreatefrompng($sourcePath),
+            'image/webp' => @imagecreatefromwebp($sourcePath),
+            default => null,
+        };
+
+        if (! $image) {
+            return null;
+        }
+
+        $w = imagesx($image);
+        $h = imagesy($image);
+
+        $maxH = 300;
+        if ($h > $maxH) {
+            $nw = max(1, (int) round($w * $maxH / $h));
+            $resized = imagecreatetruecolor($nw, $maxH);
+            imagecopyresampled($resized, $image, 0, 0, 0, 0, $nw, $maxH, $w, $h);
+            $image = $resized;
+            $w = $nw;
+            $h = $maxH;
+        }
+
+        imagefilter($image, IMG_FILTER_GRAYSCALE);
+
+        $threshold = 180;
+        $white = imagecolorallocate($image, 255, 255, 255);
+        for ($x = 0; $x < $w; $x++) {
+            for ($y = 0; $y < $h; $y++) {
+                $rgb = imagecolorat($image, $x, $y);
+                $r = ($rgb >> 16) & 0xFF;
+                $g = ($rgb >> 8) & 0xFF;
+                $b = $rgb & 0xFF;
+                $lum = (int) round(0.299 * $r + 0.587 * $g + 0.114 * $b);
+                if ($lum > $threshold) {
+                    imagesetpixel($image, $x, $y, $white);
+                }
+            }
+        }
+
+        imagefilter($image, IMG_FILTER_CONTRAST, -35);
+
+        $dir = storage_path('app/public/tanda-tangan');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+        $filename = 'tanda-tangan/'.auth()->id().'.png';
+        $outPath = storage_path('app/public/'.$filename);
+        imagepng($image, $outPath);
+
+        return $filename;
     }
 }
