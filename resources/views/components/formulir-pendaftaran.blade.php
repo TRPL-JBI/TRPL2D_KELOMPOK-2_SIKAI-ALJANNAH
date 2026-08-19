@@ -100,13 +100,8 @@
         margin-top: 30px;
     }
 
-    .fp-sign-wrap table {
+    .fp-sign-center {
         width: 100%;
-        border-collapse: collapse;
-    }
-
-    .fp-sign-box {
-        width: 50%;
         text-align: center;
         vertical-align: top;
     }
@@ -214,25 +209,16 @@
 
     {{-- Tanda Tangan --}}
     <div class="fp-sign-wrap">
-        <table>
-            <tr>
-                <td class="fp-sign-box">
-                    <div class="fp-sign-text">Pendaftar,</div>
-                    <div class="fp-sign-space"></div>
-                    <div class="fp-sign-name">{{ $pendaftar['nama'] }}</div>
-                </td>
-                <td class="fp-sign-box">
-                    <div class="fp-sign-text">Ketua RKM Al-Jannah,</div>
-                    @if($signed && !empty($ketuaData['signature_data_uri']))
-                        <div class="fp-sign-image">
-                            <img src="{{ $ketuaData['signature_data_uri'] }}" alt="Tanda Tangan Ketua">
-                        </div>
-                    @else
-                        <div class="fp-sign-space"></div>
-                    @endif
-                    <div class="fp-sign-name">{{ $ketuaData['nama'] }}</div>
-                </td>
-            </tr>
-        </table>
+        <div class="fp-sign-center">
+            <div class="fp-sign-text">Ketua RKM Al-Jannah,</div>
+            @if($signed && !empty($ketuaData['signature_data_uri']))
+                <div class="fp-sign-image">
+                    <img src="{{ $ketuaData['signature_data_uri'] }}" alt="Tanda Tangan Ketua">
+                </div>
+            @else
+                <div class="fp-sign-space"></div>
+            @endif
+            <div class="fp-sign-name">{{ $ketuaData['nama'] }}</div>
+        </div>
     </div>
 </div>
