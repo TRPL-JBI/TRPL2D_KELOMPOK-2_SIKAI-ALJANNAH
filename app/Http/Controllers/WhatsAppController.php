@@ -28,6 +28,11 @@ class WhatsAppController extends Controller
         return response()->json($this->service->status());
     }
 
+    public function serverStatusJson()
+    {
+        return response()->json($this->service->serverStatus());
+    }
+
     public function startServer()
     {
         $result = $this->service->startServer();

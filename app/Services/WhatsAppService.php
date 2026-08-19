@@ -138,7 +138,7 @@ class WhatsAppService
     /**
      * Status server sidecar: installed, running, dan dapat dijangkau.
      *
-     * @return array{installed: bool, running: bool, reachable: bool, pid: ?int, endpoint: string, log_file: string}
+     * @return array{installed: bool, running: bool, reachable: bool, pid: ?int, endpoint: string, log_file: string, log_tail: string}
      */
     public function serverStatus(): array
     {
@@ -149,7 +149,24 @@ class WhatsAppService
             'pid' => $this->sidecar->pid(),
             'endpoint' => sprintf('http://%s:%d', $this->sidecar->host(), $this->sidecar->port()),
             'log_file' => $this->sidecar->logFile(),
+            'log_tail' => $this->serverLogTail(),
         ];
+    }
+
+    /**
+     * Ambil beberapa baris terakhir dari log error sidecar (untuk diagnosa di UI).
+     */
+    protected function serverLogTail(int $lines = 15): string
+    {
+        $file = $this->sidecar->errFile();
+
+        if (! is_file($file)) {
+            return '';
+        }
+
+        $content = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+
+        return trim(implode("\n", array_slice($content, -$lines)));
     }
 
     /**

@@ -204,6 +204,7 @@ Route::middleware(['auth', 'role:adminweb'])->group(function () {
     Route::post('/adminweb/whatsapp/connect-qr', [WhatsAppController::class, 'connectQr'])->name('adminweb.whatsapp.connect-qr');
     Route::post('/adminweb/whatsapp/send', [WhatsAppController::class, 'send'])->name('adminweb.whatsapp.send');
     Route::post('/adminweb/whatsapp/logout', [WhatsAppController::class, 'logout'])->name('adminweb.whatsapp.logout');
+    Route::get('/adminweb/whatsapp/server/status', [WhatsAppController::class, 'serverStatusJson'])->name('adminweb.whatsapp.server-status');
     Route::post('/adminweb/whatsapp/server/start', [WhatsAppController::class, 'startServer'])->name('adminweb.whatsapp.server-start');
     Route::post('/adminweb/whatsapp/server/stop', [WhatsAppController::class, 'stopServer'])->name('adminweb.whatsapp.server-stop');
 });

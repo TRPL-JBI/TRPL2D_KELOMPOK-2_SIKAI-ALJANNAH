@@ -34,7 +34,7 @@ Sistem informasi organisasi RKM (Rukun Kematian) Al-Jannah Banyuwangi berbasis w
 | Frontend         | Blade Templating, Tailwind CSS v4, Vite 7                       |
 | Admin Panel      | Filament 5.3                                                    |
 | Database         | SQLite (default),支持 MySQL / MariaDB / PostgreSQL / SQL Server |
-| Editor           | Trix WYSIWYG + Livewire                                         |
+| Editor           | Filament RichEditor + Livewire                                  |
 | Media            | Spatie Laravel MediaLibrary                                     |
 | Charts           | Chart.js 4.5                                                    |
 | Export           | OpenSpout                                                       |

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "faabd84200cfeef74d9b3292647661cd",
+    "content-hash": "012bfd1c01ebc3394d39cc073e972f1c",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -8931,63 +8931,6 @@
                 }
             ],
             "time": "2026-07-21T15:13:06+00:00"
-        },
-        {
-            "name": "te7a-houdini/laravel-trix",
-            "version": "3.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/amaelftah/laravel-trix.git",
-                "reference": "e8ff1c09420113b1bc40d02f95fc4b475349ca5d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/amaelftah/laravel-trix/zipball/e8ff1c09420113b1bc40d02f95fc4b475349ca5d",
-                "reference": "e8ff1c09420113b1bc40d02f95fc4b475349ca5d",
-                "shasum": ""
-            },
-            "require": {
-                "laravel/framework": "~5.8.0|~6.0|~7.0|~8.0|~9.0|^10.0|^11.0|^12.0",
-                "php": "^7.1|^8.0"
-            },
-            "require-dev": {
-                "orchestra/testbench": "^3.5|~4.0|~5.0|~6.0|^8.0|^9.0|^10.0"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Te7aHoudini\\LaravelTrix\\LaravelTrixServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Te7aHoudini\\LaravelTrix\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Ahmed Abd El Ftah",
-                    "email": "ahmedabdelftah95165@gmail.com",
-                    "role": "Developer"
-                }
-            ],
-            "description": "trix editor for laravel inspired by ActionText for rails",
-            "homepage": "https://github.com/te7ahoudini/laravel-trix",
-            "keywords": [
-                "laravel-trix",
-                "te7a-houdini"
-            ],
-            "support": {
-                "issues": "https://github.com/amaelftah/laravel-trix/issues",
-                "source": "https://github.com/amaelftah/laravel-trix/tree/3.1.0"
-            },
-            "time": "2025-02-18T17:13:43+00:00"
         },
         {
             "name": "thecodingmachine/safe",

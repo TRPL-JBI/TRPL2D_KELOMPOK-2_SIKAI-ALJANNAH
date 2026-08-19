@@ -128,6 +128,16 @@
                                 {{ $serviceUp ? 'Ya' : 'Belum (masih booting?)' }}
                             </span>
                         </div>
+                        @if(!$serviceUp)
+                        <div id="serverBooting" data-status-url="{{ route('adminweb.whatsapp.server-status') }}" style="margin-top:12px;">
+                            <p style="font-size:13px;color:var(--primary-400);margin:0 0 8px;">
+                                Halaman akan memuat ulang otomatis begitu server siap. Jika lama, cek log di bawah:
+                            </p>
+                            @if(!empty($server['log_tail']))
+                            <pre id="serverLogTail" style="max-height:160px;overflow:auto;background:var(--primary-100);color:#1f2937;border-radius:8px;padding:10px 14px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;">{{ $server['log_tail'] }}</pre>
+                            @endif
+                        </div>
+                        @endif
                     </div>
                     <form class="wa-server-form" method="POST" action="{{ route('adminweb.whatsapp.server-stop') }}" data-confirm="Hentikan server WhatsApp? Koneksi aktif akan terputus.">
                         @csrf
@@ -149,6 +159,12 @@
                         </button>
                     </form>
                 </div>
+                @if(!empty($server['log_tail']))
+                <details style="margin-top:12px;">
+                    <summary style="font-size:13px;color:var(--primary-400);cursor:pointer;">Log error terakhir</summary>
+                    <pre style="max-height:160px;overflow:auto;background:var(--primary-100);color:#1f2937;border-radius:8px;padding:10px 14px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:8px 0 0;">{{ $server['log_tail'] }}</pre>
+                </details>
+                @endif
             @endif
         </div>
 
@@ -398,6 +414,31 @@
             });
         });
     });
+
+    var bootContainer = document.getElementById('serverBooting');
+    if (bootContainer) {
+        var serverStatusUrl = bootContainer.getAttribute('data-status-url');
+        (function pollBoot() {
+            fetch(serverStatusUrl, {
+                headers: { 'X-CSRF-TOKEN': csrfToken }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.reachable || !data.running) {
+                    window.location.reload();
+                    return;
+                }
+                if (data.log_tail) {
+                    var logEl = document.getElementById('serverLogTail');
+                    if (logEl) { logEl.textContent = data.log_tail; }
+                }
+                setTimeout(pollBoot, 3000);
+            })
+            .catch(function() {
+                setTimeout(pollBoot, 5000);
+            });
+        })();
+    }
 })();
 </script>
 @endpush
