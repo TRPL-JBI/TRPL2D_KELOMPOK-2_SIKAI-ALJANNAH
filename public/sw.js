@@ -122,6 +122,7 @@ function isDownloadRequest(request) {
     var path = url.pathname.toLowerCase();
     var exts = ['.xlsx', '.xls', '.pdf', '.docx', '.doc', '.zip', '.csv', '.ods'];
     if (exts.some(function (e) { return path.endsWith(e); })) return true;
+    if (path.endsWith('/pdf')) return true;
     if (path.indexOf('/export') !== -1) return true;
     if (path.indexOf('/template') !== -1) return true;
     return false;

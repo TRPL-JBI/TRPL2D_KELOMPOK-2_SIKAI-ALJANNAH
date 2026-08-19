@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -25,6 +26,7 @@ class User extends Authenticatable
         'password',
         'role',
         'status',
+        'tanda_tangan',
     ];
 
     /**
@@ -48,6 +50,27 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public static function ketua(): ?User
+    {
+        return self::where('role', 'ketua')->where('status', 'aktif')->first();
+    }
+
+    public function tandaTanganDataUri(): ?string
+    {
+        if (blank($this->tanda_tangan)) {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+        if (! $disk->exists($this->tanda_tangan)) {
+            return null;
+        }
+
+        $mime = $disk->mimeType($this->tanda_tangan) ?: 'image/png';
+
+        return 'data:'.$mime.';base64,'.base64_encode($disk->get($this->tanda_tangan));
     }
 
     public function pemasukan(): HasMany

@@ -6,9 +6,12 @@ use App\Models\Anggota;
 use App\Models\CalonAnggota;
 use App\Models\KeluargaAnggota;
 use App\Models\LogAktivitas;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Reader\XLSX\Reader;
 use OpenSpout\Writer\XLSX\Writer;
@@ -25,7 +28,7 @@ class SekretarisController extends Controller
         $anggotaAktif = Anggota::where('status', 'aktif')->count();
         $anggotaNonAktif = Anggota::where('status', 'non_aktif')->count();
         $menungguVerifikasi = CalonAnggota::whereIn('status', ['menunggu_verifikasi', 'sudah_membayar'])->count();
-        
+
         // Additional stats
         $sudahMembayar = CalonAnggota::where('status', 'sudah_membayar')->count();
         $belumBayar = CalonAnggota::where('status', 'menunggu_verifikasi')->count();
@@ -56,7 +59,7 @@ class SekretarisController extends Controller
         $calon->update(['status' => 'disetujui']);
 
         $lastId = Anggota::max('id') ?? 0;
-        $nomorAnggota = 'RKM-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+        $nomorAnggota = 'RKM-'.str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
 
         Anggota::create([
             'nomor_anggota' => $nomorAnggota,
@@ -88,8 +91,8 @@ class SekretarisController extends Controller
 
         if ($search) {
             $query->where('deskripsi', 'like', "%{$search}%")
-                  ->orWhere('aksi', 'like', "%{$search}%")
-                  ->orWhere('modul', 'like', "%{$search}%");
+                ->orWhere('aksi', 'like', "%{$search}%")
+                ->orWhere('modul', 'like', "%{$search}%");
         }
 
         $activities = $query->get();
@@ -106,8 +109,8 @@ class SekretarisController extends Controller
 
         if ($search) {
             $query->where('nama', 'like', "%{$search}%")
-                  ->orWhere('nomor_anggota', 'like', "%{$search}%")
-                  ->orWhere('telepon', 'like', "%{$search}%");
+                ->orWhere('nomor_anggota', 'like', "%{$search}%")
+                ->orWhere('telepon', 'like', "%{$search}%");
         }
 
         if ($statusFilter !== 'all') {
@@ -139,7 +142,7 @@ class SekretarisController extends Controller
     {
         $anggota = Anggota::find($id);
 
-        if (!$anggota) {
+        if (! $anggota) {
             return response()->json(['success' => false, 'message' => 'Anggota tidak ditemukan.'], 404);
         }
 
@@ -195,7 +198,7 @@ class SekretarisController extends Controller
     {
         $anggota = Anggota::find($id);
 
-        if (!$anggota) {
+        if (! $anggota) {
             return response()->json(['success' => false, 'message' => 'Anggota tidak ditemukan.'], 404);
         }
 
@@ -220,7 +223,7 @@ class SekretarisController extends Controller
     {
         $anggota = Anggota::find($id);
 
-        if (!$anggota) {
+        if (! $anggota) {
             return response()->json(['success' => false, 'message' => 'Anggota tidak ditemukan.'], 404);
         }
 
@@ -242,12 +245,169 @@ class SekretarisController extends Controller
     }
 
     // ---------------------------------------------------------------
+    //  Lihat Formulir Pendaftaran & Cetak PDF
+    // ---------------------------------------------------------------
+
+    public function formulirCalon($id)
+    {
+        $calon = CalonAnggota::with('keluargaAnggota')->findOrFail($id);
+
+        $payload = $this->formulirPayload($calon, false, 'REG-'.str_pad($calon->id, 5, '0', STR_PAD_LEFT));
+
+        return view('dashboard.sekretaris.formulir', $payload + [
+            'backUrl' => route('sekretaris.dashboard'),
+            'pdfUrl' => route('sekretaris.formulir.pdf', $calon->id),
+        ]);
+    }
+
+    public function formulirCalonPdf($id)
+    {
+        $this->preparePdfLimits();
+
+        $calon = CalonAnggota::with('keluargaAnggota')->findOrFail($id);
+
+        $payload = $this->formulirPayload($calon, false, 'REG-'.str_pad($calon->id, 5, '0', STR_PAD_LEFT));
+
+        return Pdf::loadView('components.formulir-pendaftaran', $payload)
+            ->download('Formulir-'.Str::slug($calon->nama).'.pdf');
+    }
+
+    public function formulirAnggota($id)
+    {
+        $anggota = Anggota::with('calonAnggota.keluargaAnggota')->findOrFail($id);
+
+        $calon = $anggota->calonAnggota ?? $this->calonFallback($anggota);
+        $payload = $this->formulirPayload($calon, true, $anggota->nomor_anggota);
+
+        return view('dashboard.sekretaris.formulir', $payload + [
+            'backUrl' => route('sekretaris.anggota'),
+            'pdfUrl' => route('sekretaris.anggota.formulir.pdf', $anggota->id),
+        ]);
+    }
+
+    public function formulirAnggotaPdf($id)
+    {
+        $this->preparePdfLimits();
+
+        $anggota = Anggota::with('calonAnggota.keluargaAnggota')->findOrFail($id);
+
+        $calon = $anggota->calonAnggota ?? $this->calonFallback($anggota);
+        $payload = $this->formulirPayload($calon, true, $anggota->nomor_anggota);
+
+        return Pdf::loadView('components.formulir-pendaftaran', $payload)
+            ->download('Formulir-'.Str::slug($anggota->nama).'.pdf');
+    }
+
+    private function calonFallback(Anggota $anggota): CalonAnggota
+    {
+        $calon = new CalonAnggota([
+            'nama' => $anggota->nama,
+            'email' => $anggota->email,
+            'telepon' => $anggota->telepon,
+            'alamat' => $anggota->alamat,
+            'status' => 'disetujui',
+            'anggota_id' => $anggota->id,
+        ]);
+        $calon->created_at = $anggota->created_at;
+
+        return $calon;
+    }
+
+    private function formulirPayload(CalonAnggota $calon, bool $signed, string $nomorPendaftaran): array
+    {
+        $ketua = User::ketua();
+
+        return [
+            'pendaftar' => [
+                'nomor_pendaftaran' => $nomorPendaftaran,
+                'nama' => $calon->nama ?: '-',
+                'jenis_kelamin' => $calon->jenis_kelamin ? ucfirst($calon->jenis_kelamin) : '-',
+                'tanggal_lahir' => $calon->tanggal_lahir
+                    ? Carbon::parse($calon->tanggal_lahir)->translatedFormat('d F Y')
+                    : '-',
+                'alamat' => $calon->alamat ?: '-',
+                'rt_rw' => $calon->rt_rw ?: '-',
+                'kelurahan' => $calon->kelurahan ?: '-',
+                'telepon' => $calon->telepon ?: '-',
+                'email' => $calon->email ?: '-',
+                'tanggal_daftar' => $calon->created_at?->translatedFormat('d F Y') ?? '-',
+            ],
+            'keluarga' => $calon->keluargaAnggota
+                ->pluck('nama')
+                ->filter()
+                ->map(fn ($nama) => $nama ?: '-')
+                ->values()
+                ->all(),
+            'signed' => $signed,
+            'ketuaData' => [
+                'nama' => $ketua?->nama ?: '................................',
+                'signature_data_uri' => $ketua?->tandaTanganDataUri(),
+            ],
+            'logoDataUri' => $this->logoDataUri(),
+        ];
+    }
+
+    private function logoDataUri(): string
+    {
+        $path = public_path('images/logo-al-jannah.png');
+
+        if (! is_file($path)) {
+            return '';
+        }
+
+        if (function_exists('imagecreatefrompng')) {
+            $src = @imagecreatefrompng($path);
+
+            if ($src) {
+                $tw = imagesx($src);
+                $th = imagesy($src);
+                $maxH = 320;
+
+                if ($th > $maxH) {
+                    $nw = (int) round($tw * $maxH / $th);
+                    $dst = imagecreatetruecolor($nw, $maxH);
+                    imagealphablending($dst, false);
+                    imagesavealpha($dst, true);
+                    imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 0, 0, 0, 127));
+                    imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $maxH, $tw, $th);
+
+                    ob_start();
+                    imagepng($dst);
+                    $data = ob_get_clean();
+
+                    imagedestroy($dst);
+                    imagedestroy($src);
+
+                    if ($data !== false) {
+                        return 'data:image/png;base64,'.base64_encode($data);
+                    }
+                }
+
+                imagedestroy($src);
+            }
+        }
+
+        return 'data:image/png;base64,'.base64_encode(file_get_contents($path));
+    }
+
+    private function preparePdfLimits(): void
+    {
+        $memory = (int) ini_get('memory_limit');
+
+        if ($memory > 0 && $memory < 256) {
+            @ini_set('memory_limit', '256M');
+        }
+
+        @set_time_limit(120);
+    }
+
+    // ---------------------------------------------------------------
     //  Import & Template Anggota
     // ---------------------------------------------------------------
 
     public function downloadTemplateAnggota()
     {
-        $writer = new Writer();
+        $writer = new Writer;
         $writer->openToBrowser('Template-Import-Anggota.xlsx');
 
         $writer->addRow(Row::fromValues([
@@ -327,7 +487,7 @@ class SekretarisController extends Controller
         $file = $request->file('file_import');
         $filePath = $file->getRealPath();
 
-        $reader = new Reader();
+        $reader = new Reader;
         $reader->open($filePath);
 
         $berhasil = 0;
@@ -336,7 +496,9 @@ class SekretarisController extends Controller
 
         foreach ($reader->getSheetIterator() as $sheet) {
             foreach ($sheet->getRowIterator() as $idx => $row) {
-                if ($idx === 1) continue;
+                if ($idx === 1) {
+                    continue;
+                }
 
                 $cells = $row->toArray();
 
@@ -348,13 +510,23 @@ class SekretarisController extends Controller
                 $status = trim((string) ($cells[5] ?? ''));
                 $namaTertanggung = trim((string) ($cells[6] ?? ''));
 
-                if (empty($nama) && empty($email)) continue;
+                if (empty($nama) && empty($email)) {
+                    continue;
+                }
 
                 try {
-                    if (empty($nama)) throw new \Exception("Baris $idx: nama wajib diisi.");
-                    if (empty($email)) throw new \Exception("Baris $idx: email wajib diisi.");
-                    if (empty($telepon)) throw new \Exception("Baris $idx: telepon wajib diisi.");
-                    if (empty($alamat)) throw new \Exception("Baris $idx: alamat wajib diisi.");
+                    if (empty($nama)) {
+                        throw new \Exception("Baris $idx: nama wajib diisi.");
+                    }
+                    if (empty($email)) {
+                        throw new \Exception("Baris $idx: email wajib diisi.");
+                    }
+                    if (empty($telepon)) {
+                        throw new \Exception("Baris $idx: telepon wajib diisi.");
+                    }
+                    if (empty($alamat)) {
+                        throw new \Exception("Baris $idx: alamat wajib diisi.");
+                    }
 
                     if (Anggota::where('email', $email)->exists()) {
                         throw new \Exception("Baris $idx: email \"$email\" sudah terdaftar.");
@@ -362,17 +534,17 @@ class SekretarisController extends Controller
 
                     if (empty($status)) {
                         $status = 'aktif';
-                    } elseif (!in_array($status, ['aktif', 'non_aktif'])) {
+                    } elseif (! in_array($status, ['aktif', 'non_aktif'])) {
                         throw new \Exception("Baris $idx: status \"$status\" tidak valid. Gunakan aktif atau non_aktif.");
                     }
 
                     if (empty($nomorAnggota)) {
                         $lastId = Anggota::max('id') ?? 0;
-                        $nomorAnggota = 'RKM-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+                        $nomorAnggota = 'RKM-'.str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
 
                         while (Anggota::where('nomor_anggota', $nomorAnggota)->exists()) {
                             $lastId++;
-                            $nomorAnggota = 'RKM-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+                            $nomorAnggota = 'RKM-'.str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
                         }
                     } else {
                         if (Anggota::where('nomor_anggota', $nomorAnggota)->exists()) {
@@ -401,7 +573,7 @@ class SekretarisController extends Controller
 
                     $anggota->update(['calon_anggota_id' => $calon->id]);
 
-                    if (!empty($namaTertanggung)) {
+                    if (! empty($namaTertanggung)) {
                         $namaList = array_map('trim', explode(',', $namaTertanggung));
                         $namaList = array_filter($namaList);
 

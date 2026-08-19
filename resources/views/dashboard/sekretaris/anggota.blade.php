@@ -108,6 +108,9 @@
                             </td>
                             <td style="padding: 12px 20px; border: 1px solid #94a3b8;">
                                 <div style="display: flex; gap: 8px; justify-content: center;">
+                                    <a href="{{ route('sekretaris.anggota.formulir', $item->id) }}" title="Lihat Formulir Pendaftaran" style="background-color: #93c5fd; border: 1px solid black; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none;">
+                                        <span class="material-icons" style="font-size: 16px; color: black;">description</span>
+                                    </a>
                                     <a href="javascript:void(0)" data-id="{{ $item->id }}" data-nama="{{ $item->nama }}" data-telepon="{{ $item->telepon }}" data-keluarga="{{ $keluargaJson }}" onclick="openEditModal(this)" style="background-color: #fcd34d; border: 1px solid black; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none;">
                                         <span class="material-icons" style="font-size: 16px; color: black;">edit</span>
                                     </a>

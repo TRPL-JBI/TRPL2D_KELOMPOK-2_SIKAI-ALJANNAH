@@ -72,6 +72,11 @@ Route::middleware(['auth', 'role:sekretaris,superadmin'])->group(function () {
 
     Route::get('/sekretaris/log', [SekretarisController::class, 'log'])->name('sekretaris.log');
 
+    Route::get('/sekretaris/formulir/{id}', [SekretarisController::class, 'formulirCalon'])->name('sekretaris.formulir');
+    Route::get('/sekretaris/formulir/{id}/pdf', [SekretarisController::class, 'formulirCalonPdf'])->name('sekretaris.formulir.pdf');
+    Route::get('/sekretaris/anggota/{id}/formulir', [SekretarisController::class, 'formulirAnggota'])->name('sekretaris.anggota.formulir');
+    Route::get('/sekretaris/anggota/{id}/formulir/pdf', [SekretarisController::class, 'formulirAnggotaPdf'])->name('sekretaris.anggota.formulir.pdf');
+
     Route::get('/sekretaris/anggota/{id}/edit', [SekretarisController::class, 'editAnggota'])->name('sekretaris.anggota.edit');
     Route::post('/sekretaris/anggota/{id}/edit', [SekretarisController::class, 'prosesEditAnggota'])->name('sekretaris.anggota.proses-edit');
 

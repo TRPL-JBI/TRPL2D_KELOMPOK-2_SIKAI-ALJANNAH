@@ -240,6 +240,10 @@
                                 </td>
                                 <td>
                                     <div class="action-buttons">
+                                        <a href="{{ route('sekretaris.formulir', $calon->id) }}" class="btn btn-info btn-sm" title="Lihat Formulir Pendaftaran" style="text-decoration: none;">
+                                            <span class="material-icons">description</span>
+                                            Formulir
+                                        </a>
                                         @if($calon->status === 'sudah_membayar')
                                             <form method="POST" action="{{ route('sekretaris.verifikasi', $calon->id) }}" style="display: inline;">
                                                 @csrf
