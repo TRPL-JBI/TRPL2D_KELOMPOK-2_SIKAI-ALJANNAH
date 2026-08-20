@@ -17,7 +17,15 @@
             <h1>Iuran Tahunan RKM Al-Jannah</h1>
             <p class="subtitle">Monitoring pembayaran iuran anggota</p>
         </div>
-        <div style="display:flex;align-items:center;gap:16px;">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <span id="waStatusBadge" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;{{ $waReady ? 'background:#d1fae5;color:#065f46;' : 'background:#fee2e2;color:#991b1b;' }}">
+                <span class="material-icons" style="font-size:14px;">{{ $waReady ? 'check_circle' : 'error' }}</span>
+                WhatsApp {{ $waReady ? 'Terhubung' : 'Belum terhubung' }}
+            </span>
+            <button class="btn-secondary" id="btnKirimTagihanSemua" onclick="kirimTagihanSemua()" data-loading data-loading-text="Mengirim..." {{ $waReady ? '' : 'disabled' }} style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;font-size:13px;">
+                <span class="material-icons" style="font-size:18px;">campaign</span>
+                Kirim Tagihan
+            </button>
             <button class="btn-primary" onclick="openCariIuranModal()" data-loading data-loading-text="Membuka..." style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;font-size:13px;">
                 <span class="material-icons" style="font-size:18px;">add</span>
                 Tambah Iuran
@@ -176,6 +184,7 @@
         <div class="modal-actions" style="gap:8px;flex-wrap:wrap;">
             <button class="btn-batal" onclick="closeInfoIuranModal()" style="flex:1;">Batal</button>
             <button class="btn-batal" id="btnGenerateAccessCode" onclick="generateAccessCode()" data-loading style="flex:1;background:#f3f4f6;color:#374151;border:2px solid #d1d5db;">Generate Access Code</button>
+            <button class="btn-batal" id="btnKirimUlangKwitansi" onclick="kirimUlangKwitansi()" data-loading style="flex:1;background:#f3f4f6;color:#374151;border:2px solid #d1d5db;">Kirim Ulang Kwitansi</button>
             <button id="btnInfoTambahTransaksi" class="btn-minta" style="flex:1;">Tambah Transaksi</button>
         </div>
     </div>
@@ -239,6 +248,16 @@
     var members = [];
     var selectedMi = -1, selectedBi = -1, monthQty = 1, nominalPerMonth = 10000;
     var currentYear = {{ date('Y') }};
+    var waReady = {{ $waReady ? 'true' : 'false' }};
+
+    function showIuranToast(msg) {
+        var el = document.getElementById('toastMsg');
+        var box = document.getElementById('toastNotif');
+        el.textContent = msg;
+        box.style.display = 'flex';
+        clearTimeout(box._t);
+        box._t = setTimeout(function() { box.style.display = 'none'; }, 4000);
+    }
 
     function fetchIuranData(tahun) {
         fetch('/bendahara/iuran/data?tahun=' + (tahun || currentYear))
@@ -270,7 +289,7 @@
                 var bln = m.bulan[b], isPaid = bln.status === 'paid';
                 html += '<td class="month-cell"><span class="status-dot" data-mi="' + i + '" data-bi="' + b + '" data-paid="' + (isPaid ? '1' : '0') + '"><span class="dot ' + (isPaid ? 'paid' : 'unpaid') + '"></span>' + (bln.date ? '<span class="date-label">' + bln.date + '</span>' : '') + '</span></td>';
             }
-            html += '<td><div style="display:flex;gap:6px;align-items:center;justify-content:center;"><a href="https://wa.me/' + m.telpon.replace(/[^0-9]/g, '') + '" target="_blank" class="btn-icon btn-wa" title="Telepon WA"><span class="material-icons" style="font-size:16px;">phone</span></a><button class="btn-icon btn-info-iuran" onclick="openInfoIuranModal(' + i + ')" title="Info Iuran"><span class="material-icons" style="font-size:16px;">info</span></button></div></td></tr>';
+            html += '<td><div style="display:flex;gap:6px;align-items:center;justify-content:center;"><button class="btn-icon btn-wa" onclick="kirimTagihan(' + i + ')" title="Kirim Tagihan Iuran via WhatsApp" data-loading data-loading-text="Mengirim..." ' + (waReady ? '' : 'disabled') + '><span class="material-icons" style="font-size:16px;">campaign</span></button><a href="https://wa.me/' + m.telpon.replace(/[^0-9]/g, '') + '" target="_blank" class="btn-icon btn-wa" title="Telepon WA"><span class="material-icons" style="font-size:16px;">phone</span></a><button class="btn-icon btn-info-iuran" onclick="openInfoIuranModal(' + i + ')" title="Info Iuran"><span class="material-icons" style="font-size:16px;">info</span></button></div></td></tr>';
         }
         if (!members.length) {
             html = '<tr><td colspan="15" style="padding:60px 32px;text-align:center;color:#9ca3af;">Belum ada data anggota</td></tr>';
@@ -322,7 +341,8 @@
             }
             closeIuranModal();
             renderIuranTable();
-            showToast(document.getElementById('toastMsg'), 'Pembayaran ' + member.nama + ' untuk ' + rangeLabel + ' (' + monthQty + ' bln) berhasil dicatat');
+            var waMsg = res.wa === 'terkirim' ? ' & kwitansi terkirim via WA' : (res.wa === 'gagal' ? ' (kwitansi WA gagal)' : '');
+            showIuranToast('Pembayaran ' + member.nama + ' untuk ' + rangeLabel + ' (' + monthQty + ' bln) berhasil dicatat' + waMsg);
             enableBtn(btn);
         })
         .catch(function(e) { console.error(e); alert('Gagal: ' + e.message); enableBtn(btn); });
@@ -430,7 +450,8 @@
             }
             closeCariIuranModal();
             renderIuranTable();
-            showToast(document.getElementById('toastMsg'), 'Pembayaran ' + member.nama + ' untuk ' + rangeLabel + ' (' + cariMonthQty + ' bln) berhasil dicatat');
+            var waMsg = res.wa === 'terkirim' ? ' & kwitansi terkirim via WA' : (res.wa === 'gagal' ? ' (kwitansi WA gagal)' : '');
+            showIuranToast('Pembayaran ' + member.nama + ' untuk ' + rangeLabel + ' (' + cariMonthQty + ' bln) berhasil dicatat' + waMsg);
             enableBtn(btn);
         })
         .catch(function(e) { console.error(e); alert('Gagal: ' + e.message); enableBtn(btn); });
@@ -583,6 +604,58 @@
         .finally(function() { enableBtn(document.getElementById('btnGenerateAccessCode')); });
     }
 
+    function kirimTagihan(idx) {
+        var member = members[idx];
+        if (!member) { enableBtn(); return; }
+        if (!waReady) { enableBtn(); alert('WhatsApp belum terhubung. Silakan hubungkan di menu adminweb.'); return; }
+        fetchAPI('/bendahara/iuran/kirim-tagihan', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ anggota_id: member.id })
+        })
+        .then(function(res) {
+            enableBtn();
+            if (!res.success) { return alert(res.message || 'Gagal mengirim tagihan'); }
+            showIuranToast(res.message);
+        })
+        .catch(function(e) { console.error(e); alert('Gagal: ' + e.message); enableBtn(); });
+    }
+
+    function kirimTagihanSemua() {
+        if (!waReady) { enableBtn(); alert('WhatsApp belum terhubung. Silakan hubungkan di menu adminweb.'); return; }
+        if (!confirm('Kirim tagihan iuran ke semua anggota yang belum lunas?')) { enableBtn(); return; }
+        fetchAPI('/bendahara/iuran/kirim-tagihan', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        })
+        .then(function(res) {
+            enableBtn();
+            if (!res.success) { return alert(res.message || 'Gagal mengirim tagihan'); }
+            showIuranToast(res.message);
+        })
+        .catch(function(e) { console.error(e); alert('Gagal: ' + e.message); enableBtn(); });
+    }
+
+    function kirimUlangKwitansi() {
+        var btn = document.getElementById('btnKirimUlangKwitansi');
+        var member = members[_infoMemberIdx];
+        if (!member) { enableBtn(btn); return; }
+        if (!waReady) { enableBtn(btn); alert('WhatsApp belum terhubung. Silakan hubungkan di menu adminweb.'); return; }
+        fetchAPI('/bendahara/iuran/kirim-kwitansi', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ anggota_id: member.id })
+        })
+        .then(function(res) {
+            enableBtn(btn);
+            if (!res.success) { return alert(res.message || 'Gagal mengirim kwitansi'); }
+            var msg = res.wa === 'terkirim' ? 'Kwitansi terkirim via WhatsApp' : (res.wa === 'gagal' ? 'Kwitansi gagal terkirim' : 'Kwitansi tidak terkirim (WA tidak aktif)');
+            showIuranToast(msg);
+        })
+        .catch(function(e) { console.error(e); alert('Gagal: ' + e.message); enableBtn(btn); });
+    }
+
     fetchIuranData(currentYear);
 
     window.decrMonth = decrMonth;
@@ -592,7 +665,9 @@
     window.incrCariBulan = incrCariBulan;
     window.submitCariIuran = submitCariIuran;
     window.generateAccessCode = generateAccessCode;
-    window.generateAccessCode = generateAccessCode;
+    window.kirimTagihan = kirimTagihan;
+    window.kirimTagihanSemua = kirimTagihanSemua;
+    window.kirimUlangKwitansi = kirimUlangKwitansi;
     window.openInfoIuranModal = openInfoIuranModal;
     window.closeInfoIuranModal = closeInfoIuranModal;
 

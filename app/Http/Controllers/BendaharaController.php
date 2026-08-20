@@ -11,6 +11,8 @@ use App\Models\Pembayaran;
 use App\Models\KategoriPemasukan;
 use App\Models\KategoriPengeluaran;
 use App\Models\PermintaanIzin;
+use App\Services\KwitansiService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use OpenSpout\Common\Entity\Row;
@@ -19,6 +21,77 @@ use OpenSpout\Writer\XLSX\Writer;
 
 class BendaharaController extends Controller
 {
+    protected function wa(): WhatsAppService
+    {
+        return app(WhatsAppService::class);
+    }
+
+    protected function kwitansi(): KwitansiService
+    {
+        return app(KwitansiService::class);
+    }
+
+    protected function bulanNama(int $b): string
+    {
+        return ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][$b - 1] ?? '';
+    }
+
+    protected function formatBulanRange(array $bulan): string
+    {
+        $nama = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+        $parts = [];
+        $n = count($bulan);
+
+        for ($i = 0; $i < $n; $i++) {
+            $start = $bulan[$i];
+            $end = $start;
+
+            while ($i + 1 < $n && $bulan[$i + 1] === $bulan[$i] + 1) {
+                $end = $bulan[++$i];
+            }
+
+            $parts[] = $start === $end
+                ? $nama[$start - 1]
+                : $nama[$start - 1] . '-' . $nama[$end - 1];
+        }
+
+        return implode(', ', $parts);
+    }
+
+    protected function kwitansiNo(string $tahun, int $pemasukanId): string
+    {
+        return 'KWT-' . $tahun . '-' . str_pad((string) $pemasukanId, 6, '0', STR_PAD_LEFT);
+    }
+
+    protected function kirimKwitansiIuranKe(Anggota $anggota, int $bulanMulai, int $bulanAkhir, int $tahun, int $jumlahBulan, float $nominal, int $pemasukanId): string
+    {
+        $no = $this->kwitansiNo((string) $tahun, $pemasukanId);
+        $periode = 'Iuran ' . $jumlahBulan . ' bln (' . $this->bulanNama($bulanMulai) . ($bulanAkhir !== $bulanMulai ? '-' . $this->bulanNama($bulanAkhir) : '') . ' ' . $tahun . ')';
+        $total = $nominal * $jumlahBulan;
+
+        $pesan = "Assalamu'alaikum *{$anggota->nama}*,\n\n"
+            . "Pembayaran iuran Anda telah kami catat:\n\n"
+            . "• Periode: {$periode}\n"
+            . '• Nominal: Rp ' . number_format($total, 0, ',', '.') . "\n"
+            . '• Tanggal: ' . now()->format('d/m/Y') . "\n\n"
+            . "Terlampir kwitansi pembayaran.\n\n"
+            . 'Terima kasih 🙏' . "\n"
+            . '— Bendahara RKM Al-Jannah';
+
+        $base64 = $this->kwitansi()->pdf([
+            'no' => $no,
+            'nama' => $anggota->nama,
+            'peruntukan' => $periode,
+            'nominal' => $total,
+            'tanggal' => now()->format('d/m/Y'),
+            'dibayar_oleh' => auth()->user()->nama ?? 'Bendahara',
+        ]);
+
+        $res = $this->wa()->sendDocument($anggota->telepon, $base64, 'Kwitansi-' . $no . '.pdf', 'application/pdf', $pesan);
+
+        return isset($res['error']) ? 'gagal' : 'terkirim';
+    }
+
     // ---------------------------------------------------------------
     //  Dashboard
     // ---------------------------------------------------------------
@@ -452,7 +525,7 @@ class BendaharaController extends Controller
         $kategoriPemasukan = KategoriPemasukan::all();
         $kategoriPengeluaran = KategoriPengeluaran::all();
 
-        return view('dashboard.bendahara.catat-transaksi', compact('transaksi', 'kategoriPemasukan', 'kategoriPengeluaran'));
+        return view('dashboard.bendahara.catat-transaksi', compact('transaksi', 'kategoriPemasukan', 'kategoriPengeluaran') + ['waReady' => $this->wa()->isReady()]);
     }
 
     public function storeTransaksi(Request $request)
@@ -463,6 +536,8 @@ class BendaharaController extends Controller
             'jumlah' => 'required|numeric|min:0',
             'keterangan' => 'nullable|string|max:1000',
             'file_bukti' => 'required|file|max:2048',
+            'wa_nama' => 'nullable|string|max:100',
+            'wa_penerima' => 'nullable|string|max:30',
         ];
 
         $rules['kategori_id'] = $request->tipe === 'pemasukan'
@@ -493,6 +568,36 @@ class BendaharaController extends Controller
 
         $model->addMedia($request->file('file_bukti'))->withCustomProperties(['uploaded_by' => auth()->id()])->toMediaCollection('bukti');
 
+        $waStatus = 'tidak_aktif';
+        $waPenerima = trim((string) $request->input('wa_penerima', ''));
+
+        if ($validated['tipe'] === 'pemasukan' && $waPenerima !== '' && $this->wa()->isReady()) {
+            $no = $this->kwitansiNo(now()->format('Y'), $model->id);
+            $keterangan = $model->keterangan ? ' (' . $model->keterangan . ')' : '';
+            $peruntukan = 'Pemasukan - ' . $kategori . $keterangan;
+            $namaPenerima = trim((string) $request->input('wa_nama', '')) ?: ('Transaksi #' . $model->id);
+
+            $pesan = 'Pembayaran *' . $peruntukan . "* telah dicatat:\n\n"
+                . '• Nominal: Rp ' . number_format($model->jumlah, 0, ',', '.') . "\n"
+                . '• Tanggal: ' . $model->created_at->format('d/m/Y') . "\n\n"
+                . "Terlampir kwitansi pembayaran.\n\n"
+                . 'Terima kasih 🙏' . "\n"
+                . '— Bendahara RKM Al-Jannah';
+
+            $base64 = $this->kwitansi()->pdf([
+                'no' => $no,
+                'nama' => $namaPenerima,
+                'peruntukan' => $peruntukan,
+                'nominal' => $model->jumlah,
+                'tanggal' => $model->created_at->format('d/m/Y'),
+                'dibayar_oleh' => auth()->user()->nama ?? 'Bendahara',
+            ]);
+
+            $res = $this->wa()->sendDocument($waPenerima, $base64, 'Kwitansi-' . $no . '.pdf', 'application/pdf', $pesan);
+
+            $waStatus = isset($res['error']) ? 'gagal' : 'terkirim';
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -503,6 +608,7 @@ class BendaharaController extends Controller
                 'kategori' => $kategori,
                 'keterangan' => $model->keterangan ?? '-',
                 'file_url' => $model->getFirstMediaUrl('bukti') ?: null,
+                'wa' => $waStatus,
             ]
         ]);
     }
@@ -595,7 +701,7 @@ class BendaharaController extends Controller
 
     public function iuran()
     {
-        return view('dashboard.bendahara.iuran');
+        return view('dashboard.bendahara.iuran', ['waReady' => $this->wa()->isReady()]);
     }
 
     public function getIuranData(Request $request)
@@ -720,8 +826,22 @@ class BendaharaController extends Controller
             ]);
         }
 
+        $waStatus = 'tidak_aktif';
+        if ($anggota->telepon && $this->wa()->isReady()) {
+            $waStatus = $this->kirimKwitansiIuranKe(
+                $anggota,
+                $validated['bulan_mulai'],
+                $bulanAkhir,
+                $validated['tahun'],
+                $validated['jumlah_bulan'],
+                $validated['nominal'],
+                $pemasukan->id,
+            );
+        }
+
         return response()->json([
             'success' => true,
+            'wa' => $waStatus,
             'data' => [
                 'pemasukan_id' => $pemasukan->id,
                 'anggota_nama' => $anggota?->nama ?? '',
@@ -729,6 +849,134 @@ class BendaharaController extends Controller
                 'bulan_akhir' => $bulanAkhir,
                 'jumlah_bulan' => $validated['jumlah_bulan'],
             ]
+        ]);
+    }
+
+    public function kirimTagihanIuran(Request $request)
+    {
+        $request->validate([
+            'anggota_id' => 'nullable|exists:anggota,id',
+        ]);
+
+        if (! $this->wa()->isReady()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'WhatsApp tidak terhubung. Pastikan server WhatsApp aktif & tersambung di menu adminweb.',
+            ], 409);
+        }
+
+        $tahun = date('Y');
+        $daftarAnggota = Anggota::where('status', 'aktif')
+            ->when($request->anggota_id, fn ($q) => $q->where('id', $request->anggota_id))
+            ->get();
+
+        $terkirim = 0;
+        $gagal = 0;
+        $tanpaNomor = 0;
+        $lunas = 0;
+
+        foreach ($daftarAnggota as $anggota) {
+            $iuran = $anggota->iuranTahunan()->where('tahun', $tahun)->get()->keyBy('bulan');
+
+            $belum = [];
+            for ($b = 1; $b <= 12; $b++) {
+                if (! isset($iuran[$b]) || $iuran[$b]->status !== 'lunas') {
+                    $belum[] = $b;
+                }
+            }
+
+            if (empty($belum)) {
+                $lunas++;
+                continue;
+            }
+
+            if (! $anggota->telepon) {
+                $tanpaNomor++;
+                continue;
+            }
+
+            $range = $this->formatBulanRange($belum);
+            $total = count($belum) * 10000;
+
+            $pesan = "Assalamu'alaikum *{$anggota->nama}*,\n\n"
+                . "Kami mengingatkan tagihan iuran tahunan RKM Al-Jannah tahun {$tahun}:\n\n"
+                . "• Bulan belum lunas: {$range}\n"
+                . '• Total tunggakan: Rp ' . number_format($total, 0, ',', '.') . "\n\n"
+                . 'Mohon segera melunasi. Terima kasih 🙏' . "\n"
+                . '— Bendahara RKM Al-Jannah';
+
+            $res = $this->wa()->send($anggota->telepon, $pesan);
+
+            if (isset($res['error'])) {
+                $gagal++;
+            } else {
+                $terkirim++;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tagihan terkirim ke ' . $terkirim . ' anggota'
+                . ($gagal ? ", {$gagal} gagal" : '')
+                . ($tanpaNomor ? ", {$tanpaNomor} tanpa nomor" : '')
+                . ($lunas ? ", {$lunas} sudah lunas" : ''),
+            'data' => [
+                'terkirim' => $terkirim,
+                'gagal' => $gagal,
+                'tanpa_nomor' => $tanpaNomor,
+                'lunas' => $lunas,
+            ],
+        ]);
+    }
+
+    public function kirimKwitansiIuran(Request $request)
+    {
+        $request->validate([
+            'anggota_id' => 'required|exists:anggota,id',
+        ]);
+
+        $anggota = Anggota::findOrFail($request->anggota_id);
+        $iuran = IuranTahunan::where('anggota_id', $anggota->id)
+            ->where('status', 'lunas')
+            ->latest('id')
+            ->first();
+
+        if (! $iuran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada riwayat pembayaran iuran untuk anggota ini.',
+            ], 422);
+        }
+
+        if (! $anggota->telepon) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anggota tidak memiliki nomor telepon.',
+            ], 422);
+        }
+
+        if (! $this->wa()->isReady()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'WhatsApp tidak terhubung. Pastikan server WhatsApp aktif & tersambung di menu adminweb.',
+            ], 409);
+        }
+
+        $rows = IuranTahunan::where('pemasukan_id', $iuran->pemasukan_id)->get();
+
+        $waStatus = $this->kirimKwitansiIuranKe(
+            $anggota,
+            (int) $rows->min('bulan'),
+            (int) $rows->max('bulan'),
+            (int) $iuran->tahun,
+            $rows->count(),
+            (float) $iuran->nominal,
+            (int) $iuran->pemasukan_id,
+        );
+
+        return response()->json([
+            'success' => true,
+            'wa' => $waStatus,
         ]);
     }
 
@@ -1202,7 +1450,34 @@ class BendaharaController extends Controller
 
         $calon->update(['status' => 'sudah_membayar']);
 
-        return response()->json(['success' => true]);
+        $waStatus = 'tidak_aktif';
+        if ($calon->telepon && $this->wa()->isReady()) {
+            $no = $this->kwitansiNo(now()->format('Y'), $pemasukan->id);
+
+            $pesan = "Assalamu'alaikum *{$calon->nama}*,\n\n"
+                . "Pembayaran pendaftaran Anda telah kami terima:\n\n"
+                . "• Jenis: Pembayaran pendaftaran anggota baru\n"
+                . '• Nominal: Rp ' . number_format($nominal, 0, ',', '.') . "\n"
+                . '• Tanggal: ' . now()->format('d/m/Y') . "\n\n"
+                . "Terlampir kwitansi pembayaran.\n\n"
+                . 'Terima kasih 🙏' . "\n"
+                . '— Bendahara RKM Al-Jannah';
+
+            $base64 = $this->kwitansi()->pdf([
+                'no' => $no,
+                'nama' => $calon->nama,
+                'peruntukan' => 'Pembayaran pendaftaran anggota baru',
+                'nominal' => $nominal,
+                'tanggal' => now()->format('d/m/Y'),
+                'dibayar_oleh' => auth()->user()->nama ?? 'Bendahara',
+            ]);
+
+            $res = $this->wa()->sendDocument($calon->telepon, $base64, 'Kwitansi-' . $no . '.pdf', 'application/pdf', $pesan);
+
+            $waStatus = isset($res['error']) ? 'gagal' : 'terkirim';
+        }
+
+        return response()->json(['success' => true, 'wa' => $waStatus]);
     }
 
     // ---------------------------------------------------------------

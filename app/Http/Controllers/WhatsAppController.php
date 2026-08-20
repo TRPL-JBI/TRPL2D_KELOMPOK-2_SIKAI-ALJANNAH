@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\KwitansiService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 
@@ -74,6 +75,44 @@ class WhatsAppController extends Controller
         }
 
         return back()->with('success', 'Pesan berhasil dikirim');
+    }
+
+    public function sendTestFile(Request $request)
+    {
+        $request->validate([
+            'to' => 'required|string',
+        ]);
+
+        if (! $this->service->isReady()) {
+            return response()->json(['error' => 'WhatsApp belum terhubung.']);
+        }
+
+        try {
+            $kwitansi = app(KwitansiService::class)->pdf([
+                'no' => 'KWT-UJI-'.date('YmdHis'),
+                'nama' => 'Anggota Uji Coba',
+                'peruntukan' => 'Iuran Bulan '.now()->translatedFormat('F Y'),
+                'tanggal' => now()->translatedFormat('d F Y'),
+                'nominal' => 10000,
+                'dibayar_oleh' => 'Anggota Uji Coba',
+            ]);
+
+            $result = $this->service->sendDocument(
+                $request->input('to'),
+                $kwitansi,
+                'Kwitansi-Uji-Coba.pdf',
+                'application/pdf',
+                'Uji kirim file kwitansi dari AdminWeb.'
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()]);
+        }
+
+        if (! empty($result['error'])) {
+            return response()->json(['error' => $result['error']]);
+        }
+
+        return response()->json(['message' => 'File kwitansi berhasil dikirim.']);
     }
 
     public function logout()
