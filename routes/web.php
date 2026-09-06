@@ -116,6 +116,7 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:superadmin'])->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin.dashboard');
+    Route::get('/superadmin/user', [SuperAdminController::class, 'userIndex'])->name('superadmin.user');
     Route::get('/superadmin/log', [SuperAdminController::class, 'logIndex'])->name('superadmin.log');
     Route::get('/superadmin/file', [SuperAdminController::class, 'fileIndex'])->name('superadmin.file');
     Route::post('/superadmin/file/upload', [SuperAdminController::class, 'uploadFile'])->name('superadmin.file.upload');

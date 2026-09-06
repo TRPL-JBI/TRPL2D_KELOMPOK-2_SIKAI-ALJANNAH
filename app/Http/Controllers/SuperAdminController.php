@@ -18,6 +18,16 @@ class SuperAdminController extends Controller
 {
     public function index(Request $request)
     {
+        $totalUsers = User::count();
+        $activeUsers = User::where('status', 'aktif')->count();
+        $files = FileOrganisasi::all();
+        $logs = LogSuperadmin::all();
+
+        return view('dashboard.superadmin.index', compact('totalUsers', 'activeUsers', 'files', 'logs'));
+    }
+
+    public function userIndex(Request $request)
+    {
         $search = $request->get('search');
 
         $users = User::when($search, function ($query, $search) {
@@ -27,10 +37,8 @@ class SuperAdminController extends Controller
 
         $totalUsers = User::count();
         $activeUsers = User::where('status', 'aktif')->count();
-        $files = FileOrganisasi::all();
-        $logs = LogSuperadmin::all();
 
-        return view('dashboard.superadmin.index', compact('users', 'totalUsers', 'activeUsers', 'files', 'logs'));
+        return view('dashboard.superadmin.users', compact('users', 'totalUsers', 'activeUsers'));
     }
 
     public function fileIndex(Request $request)

@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS · SuperAdmin Control Center</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+  :root{
+    --bg:#080b12;
+    --surface:#10151f;
+    --surface-2:#161c2a;
+    --surface-3:#1d2435;
+    --border:#222a3d;
+    --border-light:#2d3650;
+    --accent:#00ffa3;
+    --accent-dim:rgba(0,255,163,.12);
+    --accent-glow:rgba(0,255,163,.35);
+    --danger:#ff3d6e;
+    --danger-dim:rgba(255,61,110,.12);
+    --warning:#ffb547;
+    --warning-dim:rgba(255,181,71,.12);
+    --info:#5eead4;
+    --text:#f0f4fa;
+    --text-2:#a8b3c7;
+    --text-muted:#5a6580;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow:hidden;height:100vh}
+  .font-display{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.02em}
+  .font-mono{font-family:'JetBrains Mono',monospace}
+  
+  /* Animated background grid */
+  .bg-grid{
+    background-image:
+      linear-gradient(rgba(0,255,163,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,163,.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: -1px -1px;
+  }
+  .bg-radial{
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,255,163,.08), transparent),
+      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(255,61,110,.05), transparent);
+  }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+  
+  /* Sidebar */
+  .sidebar-item{
+    position:relative;
+    transition:all .2s ease;
+  }
+  .sidebar-item::before{
+    content:'';
+    position:absolute;
+    left:0;
+    top:50%;
+    transform:translateY(-50%);
+    width:3px;
+    height:0;
+    background:var(--accent);
+    border-radius:0 3px 3px 0;
+    transition:height .25s ease;
+    box-shadow:0 0 12px var(--accent-glow);
+  }
+  .sidebar-item.active::before{height:24px}
+  .sidebar-item.active{
+    background:linear-gradient(90deg, var(--accent-dim), transparent);
+    color:var(--accent);
+  }
+  .sidebar-item:not(.active):hover{
+    background:var(--surface-2);
+    color:var(--text);
+  }
+  
+  /* Cards */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    transition:border-color .2s ease;
+  }
+  .card:hover{border-color:var(--border-light)}
+  
+  /* Stat cards */
+  .stat-card{
+    position:relative;
+    overflow:hidden;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:20px;
+    transition:all .3s ease;
+  }
+  .stat-card::after{
+    content:'';
+    position:absolute;
+    top:0;right:0;
+    width:120px;height:120px;
+    background:radial-gradient(circle, var(--glow,rgba(0,255,163,.15)) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .stat-card:hover{
+    transform:translateY(-2px);
+    border-color:var(--border-light);
+  }
+  
+  /* Live pulse */
+  .pulse-dot{
+    width:8px;height:8px;
+    background:var(--accent);
+    border-radius:50%;
+    position:relative;
+  }
+  .pulse-dot::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    background:var(--accent);
+    animation:pulse 2s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{transform:scale(1);opacity:.8}
+    100%{transform:scale(2.5);opacity:0}
+  }
+  
+  /* Buttons */
+  .btn-primary{
+    background:var(--accent);
+    color:#001a10;
+    font-weight:600;
+    transition:all .2s ease;
+    box-shadow:0 0 0 0 var(--accent-glow);
+  }
+  .btn-primary:hover{
+    box-shadow:0 0 24px var(--accent-glow);
+    transform:translateY(-1px);
+  }
+  .btn-ghost{
+    background:var(--surface-2);
+    color:var(--text-2);
+    border:1px solid var(--border);
+    transition:all .2s ease;
+  }
+  .btn-ghost:hover{
+    background:var(--surface-3);
+    color:var(--text);
+    border-color:var(--border-light);
+  }
+  .btn-danger{
+    background:var(--danger-dim);
+    color:var(--danger);
+    border:1px solid rgba(255,61,110,.25);
+    transition:all .2s ease;
+  }
+  .btn-danger:hover{
+    background:var(--danger);
+    color:#fff;
+  }
+  
+  /* Inputs */
+  .input{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    transition:all .2s ease;
+  }
+  .input:focus{
+    outline:none;
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-dim);
+  }
+  
+  /* Badges */
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:3px 10px;
+    border-radius:6px;
+    font-size:11px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+  .badge-success{background:var(--accent-dim);color:var(--accent)}
+  .badge-warning{background:var(--warning-dim);color:var(--warning)}
+  .badge-danger{background:var(--danger-dim);color:var(--danger)}
+  .badge-info{background:rgba(94,234,212,.12);color:var(--info)}
+  .badge-muted{background:var(--surface-3);color:var(--text-muted)}
+  
+  /* Table */
+  table{border-collapse:separate;border-spacing:0}
+  .data-row{transition:background .15s ease}
+  .data-row:hover{background:var(--surface-2)}
+  
+  /* Chart bars */
+  .chart-bar{
+    background:linear-gradient(180deg, var(--accent) 0%, rgba(0,255,163,.2) 100%);
+    border-radius:4px 4px 2px 2px;
+    transition:all .3s ease;
+    position:relative;
+    cursor:pointer;
+  }
+  .chart-bar:hover{
+    background:linear-gradient(180deg, #5effc3 0%, rgba(0,255,163,.4) 100%);
+    box-shadow:0 0 20px var(--accent-glow);
+  }
+  
+  /* Modal */
+  .modal-backdrop{
+    background:rgba(8,11,18,.7);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+  }
+  .modal-content{
+    background:var(--surface);
+    border:1px solid var(--border-light);
+    box-shadow:0 24px 60px rgba(0,0,0,.5);
+  }
+  
+  /* Toast */
+  .toast{
+    background:var(--surface);
+    border:1px solid var(--border-light);
+    box-shadow:0 12px 32px rgba(0,0,0,.4);
+    animation:toast-in .3s ease;
+  }
+  @keyframes toast-in{
+    from{transform:translateX(120%);opacity:0}
+    to{transform:translateX(0);opacity:1}
+  }
+  
+  /* Page transition */
+  .page-view{
+    animation:fade-up .35s ease;
+  }
+  @keyframes fade-up{
+    from{opacity:0;transform:translateY(8px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+  
+  /* File card */
+  .file-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    transition:all .25s ease;
+    position:relative;
+    overflow:hidden;
+  }
+  .file-card:hover{
+    border-color:var(--accent);
+    transform:translateY(-2px);
+    box-shadow:0 12px 32px rgba(0,0,0,.3);
+  }
+  .file-card::before{
+    content:'';
+    position:absolute;
+    top:0;left:0;right:0;
+    height:3px;
+    background:var(--file-color, var(--accent));
+    opacity:0;
+    transition:opacity .25s ease;
+  }
+  .file-card:hover::before{opacity:1}
+  
+  /* Activity feed item */
+  .activity-item{
+    position:relative;
+    padding-left:24px;
+  }
+  .activity-item::before{
+    content:'';
+    position:absolute;
+    left:7px;top:18px;bottom:-12px;
+    width:1px;
+    background:var(--border);
+  }
+  .activity-item:last-child::before{display:none}
+  .activity-dot{
+    position:absolute;
+    left:3px;top:6px;
+    width:9px;height:9px;
+    border-radius:50%;
+    background:var(--surface);
+    border:2px solid var(--accent);
+    z-index:1;
+  }
+  
+  /* Custom checkbox */
+  .checkbox{
+    width:16px;height:16px;
+    border:1.5px solid var(--border-light);
+    border-radius:4px;
+    background:var(--surface-2);
+    cursor:pointer;
+    position:relative;
+    transition:all .15s ease;
+  }
+  .checkbox.checked{
+    background:var(--accent);
+    border-color:var(--accent);
+  }
+  .checkbox.checked::after{
+    content:'✓';
+    position:absolute;
+    inset:0;
+    color:#001a10;
+    font-size:11px;
+    font-weight:bold;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  
+  /* Select */
+  select.input{
+    background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8b3c7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat:no-repeat;
+    background-position:right 10px center;
+    background-size:14px;
+    padding-right:32px;
+    appearance:none;
+  }
+  
+  /* Progress */
+  .progress-bar{
+    height:6px;
+    background:var(--surface-3);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    background:linear-gradient(90deg, var(--accent), #5effc3);
+    border-radius:3px;
+    transition:width .8s ease;
+  }
+  
+  .gradient-text{
+    background:linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  
+  /* Toggle view */
+  .view-toggle.active{
+    background:var(--accent-dim);
+    color:var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<div class="flex h-screen">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="w-[240px] flex-shrink-0 bg-[var(--surface)] border-r border-[var(--border)] flex flex-col">
+    <!-- Logo -->
+    <div class="px-5 py-5 border-b border-[var(--border)]">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-[var(--accent)] flex items-center justify-center relative">
+          <i class="fa-solid fa-hexagon-nodes text-[#001a10] text-lg"></i>
+          <div class="absolute inset-0 rounded-lg bg-[var(--accent)] blur-md opacity-50 -z-10"></div>
+        </div>
+        <div>
+          <div class="font-display font-bold text-lg leading-none">NEXUS</div>
+          <div class="text-[10px] text-[var(--text-muted)] font-mono tracking-widest mt-1">CONTROL CENTER</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Nav -->
+    <nav class="flex-1 py-4 overflow-y-auto">
+      <div class="px-4 mb-2 text-[10px] font-mono text-[var(--text-muted)] tracking-widest">MENU UTAMA</div>
+      <a class="sidebar-item active flex items-center gap-3 px-5 py-2.5 text-sm cursor-pointer" data-view="dashboard">
+        <i class="fa-solid fa-gauge-high w-4"></i><span>Dashboard</span>
+      </a>
+      <a class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-sm cursor-pointer text-[var(--text-2)]" data-view="users">
+        <i class="fa-solid fa-users w-4"></i><span>Manajemen User</span>
+        <span class="ml-auto text-[10px] font-mono bg-[var(--surface-3)] px-1.5 py-0.5 rounded" id="sidebarUserCount">14</span>
+      </a>
+      <a class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-sm cursor-pointer text-[var(--text-2)]" data-view="files">
+        <i class="fa-solid fa-folder-open w-4"></i><span>Storage File</span>
+        <span class="ml-auto text-[10px] font-mono bg-[var(--surface-3)] px-1.5 py-0.5 rounded" id="sidebarFileCount">18</span>
+      </a>
+      <a class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-sm cursor-pointer text-[var(--text-2)]" data-view="logs">
+        <i class="fa-solid fa-list-check w-4"></i><span>Log Aktivitas</span>
+      </a>
+      
+      <div class="px-4 mt-6 mb-2 text-[10px] font-mono text-[var(--text-muted)] tracking-widest">SISTEM</div>
+      <a class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-sm cursor-pointer text-[var(--text-2)]">
+        <i class="fa-solid fa-gear w-4"></i><span>Pengaturan</span>
+      </a>
+      <a class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-sm cursor-pointer text-[var(--text-2)]">
+        <i class="fa-solid fa-shield-halved w-4"></i><span>Keamanan</span>
+      </a>
+    </nav>
+    
+    <!-- System status -->
+    <div class="p-4 border-t border-[var(--border)]">
+      <div class="card p-3 bg-[var(--surface-2)]">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest">STATUS SISTEM</span>
+          <div class="pulse-dot"></div>
+        </div>
+        <div class="text-xs text-[var(--text-2)]">Semua layanan operasional</div>
+        <div class="mt-2 flex items-center gap-2 text-[10px] font-mono text-[var(--text-muted)]">
+          <span class="text-[var(--accent)]">●</span> Uptime 99.98%
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="flex-1 flex flex-col overflow-hidden bg-radial">
+    <!-- Top bar -->
+    <header class="flex-shrink-0 border-b border-[var(--border)] bg-[var(--surface)]/60 backdrop-blur px-6 py-3 flex items-center gap-4">
+      <div class="flex items-center gap-2 text-sm">
+        <span class="text-[var(--text-muted)]">SuperAdmin</span>
+        <i class="fa-solid fa-chevron-right text-[10px] text-[var(--text-muted)]"></i>
+        <span class="text-[var(--text)] font-medium" id="breadcrumb">Dashboard</span>
+      </div>
+      
+      <div class="flex-1 max-w-md mx-auto relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]"></i>
+        <input type="text" id="globalSearch" placeholder="Cari user, file, atau log... (Ctrl+K)" 
+               class="input w-full pl-9 pr-4 py-2 rounded-lg text-sm">
+        <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[var(--text-muted)] bg-[var(--surface-3)] px-1.5 py-0.5 rounded border border-[var(--border)]">⌘K</kbd>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <button class="btn-ghost w-9 h-9 rounded-lg flex items-center justify-center relative" title="Notifikasi">
+          <i class="fa-solid fa-bell text-sm"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-[var(--danger)] rounded-full"></span>
+        </button>
+        <button class="btn-ghost w-9 h-9 rounded-lg flex items-center justify-center" title="Bantuan">
+          <i class="fa-solid fa-circle-question text-sm"></i>
+        </button>
+        <div class="w-px h-6 bg-[var(--border)] mx-1"></div>
+        <div class="flex items-center gap-3 pl-2">
+          <div class="text-right">
+            <div class="text-sm font-medium leading-tight">Reza Adimulya</div>
+            <div class="text-[10px] text-[var(--text-muted)] font-mono">SUPERADMIN</div>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--accent)] to-[#5eead4] flex items-center justify-center text-[#001a10] font-bold text-sm">RA</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content area -->
+    <div class="flex-1 overflow-y-auto bg-grid" id="contentArea">
+      
+      <!-- ========== DASHBOARD VIEW ========== -->
+      <section class="page-view p-6" id="view-dashboard">
+        <!-- Page header -->
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <div class="flex items-center gap-3 mb-1">
+              <div class="pulse-dot"></div>
+              <span class="text-[11px] font-mono text-[var(--accent)] tracking-widest">LIVE MONITORING</span>
+            </div>
+            <h1 class="font-display text-3xl font-bold gradient-text">Ringkasan Aktivitas Sistem</h1>
+            <p class="text-sm text-[var(--text-2)] mt-1">Pemantauan real-time seluruh aktivitas platform · <span class="font-mono text-[var(--text-muted)]" id="currentDate"></span></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn-ghost px-3 py-2 rounded-lg text-xs flex items-center gap-2"><i class="fa-solid fa-calendar-day"></i> 7 Hari Terakhir</button>
+            <button class="btn-primary px-4 py-2 rounded-lg text-xs flex items-center gap-2"><i class="fa-solid fa-download"></i> Export Laporan</button>
+          </div>
+        </div>
+        
+        <!-- Stats grid -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+          <div class="stat-card" style="--glow:rgba(0,255,163,.15)">
+            <div class="flex items-start justify-between mb-3">
+              <div class="w-10 h-10 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center">
+                <i class="fa-solid fa-users text-[var(--accent)]"></i>
+              </div>
+              <span class="badge badge-success"><i class="fa-solid fa-arrow-up text-[8px]"></i> 12.5%</span>
+            </div>
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">TOTAL PENGGUNA</div>
+            <div class="font-display text-3xl font-bold" id="statUsers">14</div>
+            <div class="text-xs text-[var(--text-muted)] mt-1">10 aktif · 4 non-aktif</div>
+          </div>
+          
+          <div class="stat-card" style="--glow:rgba(94,234,212,.15)">
+            <div class="flex items-start justify-between mb-3">
+              <div class="w-10 h-10 rounded-lg bg-[rgba(94,234,212,.12)] flex items-center justify-center">
+                <i class="fa-solid fa-database text-[var(--info)]"></i>
+              </div>
+              <span class="badge badge-info"><i class="fa-solid fa-arrow-up text-[8px]"></i> 8.2%</span>
+            </div>
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">TOTAL FILE STORAGE</div>
+            <div class="font-display text-3xl font-bold">18</div>
+            <div class="text-xs text-[var(--text-muted)] mt-1">142.8 MB digunakan</div>
+          </div>
+          
+          <div class="stat-card" style="--glow:rgba(255,181,71,.15)">
+            <div class="flex items-start justify-between mb-3">
+              <div class="w-10 h-10 rounded-lg bg-[var(--warning-dim)] flex items-center justify-center">
+                <i class="fa-solid fa-bolt text-[var(--warning)]"></i>
+              </div>
+              <span class="badge badge-warning">Live</span>
+            </div>
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">AKTIVITAS HARI INI</div>
+            <div class="font-display text-3xl font-bold" id="statActivity">247</div>
+            <div class="text-xs text-[var(--text-muted)] mt-1">38 aksi/jam rata-rata</div>
+          </div>
+          
+          <div class="stat-card" style="--glow:rgba(255,61,110,.15)">
+            <div class="flex items-start justify-between mb-3">
+              <div class="w-10 h-10 rounded-lg bg-[var(--danger-dim)] flex items-center justify-center">
+                <i class="fa-solid fa-triangle-exclamation text-[var(--danger)]"></i>
+              </div>
+              <span class="badge badge-danger"><i class="fa-solid fa-arrow-down text-[8px]"></i> 3.1%</span>
+            </div>
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">PERINGATAN KEAMANAN</div>
+            <div class="font-display text-3xl font-bold">3</div>
+            <div class="text-xs text-[var(--text-muted)] mt-1">2 upaya login gagal</div>
+          </div>
+        </div>
+        
+        <!-- Chart + Activity feed -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <!-- Chart -->
+          <div class="card col-span-2 p-5">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h3 class="font-display font-semibold text-lg">Aktivitas Mingguan</h3>
+                <p class="text-xs text-[var(--text-muted)]">Distribusi aksi pengguna dalam 7 hari terakhir</p>
+              </div>
+              <div class="flex items-center gap-4 text-xs">
+                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-[var(--accent)]"></span><span class="text-[var(--text-2)]">Login & Sesi</span></div>
+                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-[var(--info)]"></span><span class="text-[var(--text-2)]">Operasi File</span></div>
+                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-[var(--warning)]"></span><span class="text-[var(--text-2)]">Admin Action</span></div>
+              </div>
+            </div>
+            <div class="flex items-end justify-between gap-3 h-56 px-2" id="chartContainer">
+              <!-- Bars akan di-render oleh JS -->
+            </div>
+          </div>
+          
+          <!-- Activity feed -->
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-display font-semibold text-lg">Aktivitas Terkini</h3>
+                <p class="text-xs text-[var(--text-muted)]">Real-time update</p>
+              </div>
+              <div class="pulse-dot"></div>
+            </div>
+            <div class="space-y-3 max-h-64 overflow-y-auto pr-1" id="activityFeed">
+              <!-- Activity items akan di-render -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Storage + Quick insights -->
+        <div class="grid grid-cols-3 gap-4">
+          <div class="card col-span-2 p-5">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-display font-semibold text-lg">Penggunaan Storage</h3>
+                <p class="text-xs text-[var(--text-muted)]">Distribusi berdasarkan tipe file</p>
+              </div>
+              <span class="font-mono text-xs text-[var(--text-muted)]">142.8 / 500 MB</span>
+            </div>
+            <div class="progress-bar mb-4">
+              <div class="progress-fill" style="width:28.5%"></div>
+            </div>
+            <div class="grid grid-cols-4 gap-3" id="storageBreakdown">
+              <!-- Type breakdown -->
+            </div>
+          </div>
+          
+          <div class="card p-5">
+            <h3 class="font-display font-semibold text-lg mb-4">Distribusi Role</h3>
+            <div class="space-y-3" id="roleDistribution">
+              <!-- Role distribution -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== USERS VIEW ========== -->
+      <section class="page-view p-6 hidden" id="view-users">
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <span class="text-[11px] font-mono text-[var(--accent)] tracking-widest">MANAJEMEN PENGGUNA</span>
+            <h1 class="font-display text-3xl font-bold mt-1">Daftar Pengguna Sistem</h1>
+            <p class="text-sm text-[var(--text-2)] mt-1">Kelola seluruh akun pengguna, role, dan status</p>
+          </div>
+          <button class="btn-primary px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" onclick="openUserModal()">
+            <i class="fa-solid fa-plus"></i> Tambah Pengguna
+          </button>
+        </div>
+        
+        <!-- Filter bar -->
+        <div class="card p-4 mb-4 flex items-center gap-3 flex-wrap">
+          <div class="relative flex-1 min-w-[240px]">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]"></i>
+            <input type="text" id="userSearch" placeholder="Cari nama atau email..." class="input w-full pl-9 pr-4 py-2 rounded-lg text-sm">
+          </div>
+          <select id="userRoleFilter" class="input py-2 rounded-lg text-sm cursor-pointer min-w-[140px]">
+            <option value="">Semua Role</option>
+            <option value="superadmin">Super Admin</option>
+            <option value="admin">Admin</option>
+            <option value="editor">Editor</option>
+            <option value="viewer">Viewer</option>
+          </select>
+          <select id="userStatusFilter" class="input py-2 rounded-lg text-sm cursor-pointer min-w-[140px]">
+            <option value="">Semua Status</option>
+            <option value="active">Aktif</option>
+            <option value="inactive">Non-aktif</option>
+            <option value="suspended">Suspend</option>
+          </select>
+          <button class="btn-ghost px-3 py-2 rounded-lg text-sm flex items-center gap-2" onclick="resetUserFilter()">
+            <i class="fa-solid fa-rotate-left text-xs"></i> Reset
+          </button>
+          <div class="text-xs text-[var(--text-muted)] font-mono ml-auto" id="userResultInfo">0 hasil</div>
+        </div>
+        
+        <!-- Table -->
+        <div class="card overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-[var(--surface-2)] text-[var(--text-muted)] text-[10px] font-mono tracking-widest uppercase">
+                <th class="text-left px-4 py-3"><div class="checkbox" onclick="toggleAllUsers(this)"></div></th>
+                <th class="text-left px-4 py-3">Pengguna</th>
+                <th class="text-left px-4 py-3">Role</th>
+                <th class="text-left px-4 py-3">Status</th>
+                <th class="text-left px-4 py-3">Terakhir Aktif</th>
+                <th class="text-left px-4 py-3">Dibuat</th>
+                <th class="text-right px-4 py-3">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+          <div class="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between text-xs">
+            <div class="text-[var(--text-muted)]">Menampilkan <span id="userShowingStart">1</span>-<span id="userShowingEnd">10</span> dari <span id="userTotal">14</span> pengguna</div>
+            <div class="flex items-center gap-1" id="userPagination"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== FILES VIEW ========== -->
+      <section class="page-view p-6 hidden" id="view-files">
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <span class="text-[11px] font-mono text-[var(--accent)] tracking-widest">STORAGE MANAGEMENT</span>
+            <h1 class="font-display text-3xl font-bold mt-1">Daftar File Storage</h1>
+            <p class="text-sm text-[var(--text-2)] mt-1">Kelola dan unduh file yang tersimpan di sistem</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="flex bg-[var(--surface-2)] rounded-lg p-1 border border-[var(--border)]">
+              <button class="view-toggle active px-3 py-1.5 rounded-md text-xs flex items-center gap-2" data-mode="grid" onclick="setFileView('grid')"><i class="fa-solid fa-grip"></i> Grid</button>
+              <button class="view-toggle px-3 py-1.5 rounded-md text-xs flex items-center gap-2" data-mode="list" onclick="setFileView('list')"><i class="fa-solid fa-list"></i> List</button>
+            </div>
+            <button class="btn-primary px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" onclick="showToast('Fitur upload file dibuka','info')">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Upload File
+            </button>
+          </div>
+        </div>
+        
+        <!-- Storage overview -->
+        <div class="grid grid-cols-4 gap-3 mb-5">
+          <div class="card p-4">
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">TOTAL UKURAN</div>
+            <div class="font-display text-xl font-bold">142.8 <span class="text-sm text-[var(--text-muted)]">MB</span></div>
+          </div>
+          <div class="card p-4">
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">KUOTA TERPAKAI</div>
+            <div class="font-display text-xl font-bold">28.5<span class="text-sm text-[var(--text-muted)]">%</span></div>
+          </div>
+          <div class="card p-4">
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">TOTAL FILE</div>
+            <div class="font-display text-xl font-bold" id="filesTotalCount">18</div>
+          </div>
+          <div class="card p-4">
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">UNDUHAN BULAN INI</div>
+            <div class="font-display text-xl font-bold">156</div>
+          </div>
+        </div>
+        
+        <!-- Filter -->
+        <div class="card p-4 mb-4 flex items-center gap-3 flex-wrap">
+          <div class="relative flex-1 min-w-[240px]">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]"></i>
+            <input type="text" id="fileSearch" placeholder="Cari nama file..." class="input w-full pl-9 pr-4 py-2 rounded-lg text-sm">
+          </div>
+          <select id="fileTypeFilter" class="input py-2 rounded-lg text-sm cursor-pointer min-w-[140px]">
+            <option value="">Semua Tipe</option>
+            <option value="pdf">PDF</option>
+            <option value="doc">Dokumen</option>
+            <option value="xls">Spreadsheet</option>
+            <option value="img">Gambar</option>
+            <option value="vid">Video</option>
+            <option value="zip">Arsip</option>
+            <option value="audio">Audio</option>
+          </select>
+          <select id="fileSort" class="input py-2 rounded-lg text-sm cursor-pointer min-w-[160px]">
+            <option value="date-desc">Terbaru</option>
+            <option value="date-asc">Terlama</option>
+            <option value="size-desc">Ukuran (Besar)</option>
+            <option value="size-asc">Ukuran (Kecil)</option>
+            <option value="name-asc">Nama (A-Z)</option>
+          </select>
+          <div class="text-xs text-[var(--text-muted)] font-mono ml-auto" id="fileResultInfo">0 hasil</div>
+        </div>
+        
+        <!-- File grid/list -->
+        <div id="filesContainer"></div>
+      </section>
+
+      <!-- ========== LOGS VIEW ========== -->
+      <section class="page-view p-6 hidden" id="view-logs">
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <span class="text-[11px] font-mono text-[var(--accent)] tracking-widest">AUDIT TRAIL</span>
+            <h1 class="font-display text-3xl font-bold mt-1">Log Aktivitas Sistem</h1>
+            <p class="text-sm text-[var(--text-2)] mt-1">Rekam jejak lengkap setiap aksi dengan IP dan timestamp</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn-ghost px-3 py-2.5 rounded-lg text-sm flex items-center gap-2" onclick="showToast('Log dibersihkan setelah diekspor','success')"><i class="fa-solid fa-broom"></i> Bersihkan Log</button>
+            <button class="btn-primary px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" onclick="exportLogs()"><i class="fa-solid fa-file-export"></i> Export CSV</button>
+          </div>
+        </div>
+        
+        <!-- Log stats -->
+        <div class="grid grid-cols-5 gap-3 mb-5">
+          <div class="card p-4">
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">TOTAL LOG</div>
+            <div class="font-display text-xl font-bold" id="logTotal">24</div>
+          </div>
+          <div class="card p-4">
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">LOGIN</div>
+            <div class="font-display text-xl font-bold text-[var(--accent)]" id="logLogin">8</div>
+          </div>
+          <div class="card p-4">
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">UPLOAD/DOWNLOAD</div>
+            <div class="font-display text-xl font-bold text-[var(--info)]" id="logFile">7</div>
+          </div>
+          <div class="card p-4">
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">ADMIN ACTION</div>
+            <div class="font-display text-xl font-bold text-[var(--warning)]" id="logAdmin">6</div>
+          </div>
+          <div class="card p-4">
+            <div class="text-[10px] font-mono text-[var(--text-muted)] tracking-widest mb-1">KEAMANAN</div>
+            <div class="font-display text-xl font-bold text-[var(--danger)]" id="logSec">3</div>
+          </div>
+        </div>
+        
+        <!-- Filter -->
+        <div class="card p-4 mb-4 flex items-center gap-3 flex-wrap">
+          <div class="relative flex-1 min-w-[240px]">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]"></i>
+            <input type="text" id="logSearch" placeholder="Cari berdasarkan user, aksi, atau IP..." class="input w-full pl-9 pr-4 py-2 rounded-lg text-sm">
+          </div>
+          <select id="logActionFilter" class="input py-2 rounded-lg text-sm cursor-pointer min-w-[160px]">
+            <option value="">Semua Aksi</option>
+            <option value="login">Login</option>
+            <option value="logout">Logout</option>
+            <option value="upload">Upload</option>
+            <option value="download">Download</option>
+            <option value="create">Create User</option>
+            <option value="update">Update</option>
+            <option value="delete">Delete</option>
+            <option value="security">Keamanan</option>
+          </select>
+          <select id="logDateFilter" class="input py-2 rounded-lg text-sm cursor-pointer min-w-[140px]">
+            <option value="">Semua Waktu</option>
+            <option value="today">Hari Ini</option>
+            <option value="yesterday">Kemarin</option>
+            <option value="week">7 Hari</option>
+          </select>
+          <div class="text-xs text-[var(--text-muted)] font-mono ml-auto" id="logResultInfo">0 hasil</div>
+        </div>
+        
+        <!-- Logs table -->
+        <div class="card overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-[var(--surface-2)] text-[var(--text-muted)] text-[10px] font-mono tracking-widest uppercase">
+                <th class="text-left px-4 py-3 w-12">#</th>
+                <th class="text-left px-4 py-3">Waktu</th>
+                <th class="text-left px-4 py-3">Pengguna</th>
+                <th class="text-left px-4 py-3">Aksi</th>
+                <th class="text-left px-4 py-3">Detail</th>
+                <th class="text-left px-4 py-3">Alamat IP</th>
+                <th class="text-center px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody"></tbody>
+          </table>
+          <div class="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between text-xs">
+            <div class="text-[var(--text-muted)]">Menampilkan <span id="logShowingStart">1</span>-<span id="logShowingEnd">10</span> dari <span id="logTotalEntries">24</span> log</div>
+            <div class="flex items-center gap-1" id="logPagination"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- ============ USER MODAL ============ -->
+<div id="userModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+  <div class="modal-content w-full max-w-md rounded-2xl p-6">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h3 class="font-display text-xl font-bold" id="userModalTitle">Tambah Pengguna</h3>
+        <p class="text-xs text-[var(--text-muted)] mt-0.5">Lengkapi data pengguna baru</p>
+      </div>
+      <button class="w-8 h-8 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)]" onclick="closeUserModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="userForm" class="space-y-4">
+      <input type="hidden" id="userId">
+      <div>
+        <label class="text-xs text-[var(--text-2)] mb-1.5 block">Nama Lengkap</label>
+        <input type="text" id="userName" required class="input w-full px-3 py-2 rounded-lg text-sm" placeholder="cth: Budi Santoso">
+      </div>
+      <div>
+        <label class="text-xs text-[var(--text-2)] mb-1.5 block">Email</label>
+        <input type="email" id="userEmail" required class="input w-full px-3 py-2 rounded-lg text-sm" placeholder="budi@company.com">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-[var(--text-2)] mb-1.5 block">Role</label>
+          <select id="userRole" required class="input w-full px-3 py-2 rounded-lg text-sm cursor-pointer">
+            <option value="viewer">Viewer</option>
+            <option value="editor">Editor</option>
+            <option value="admin">Admin</option>
+            <option value="superadmin">Super Admin</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-[var(--text-2)] mb-1.5 block">Status</label>
+          <select id="userStatus" required class="input w-full px-3 py-2 rounded-lg text-sm cursor-pointer">
+            <option value="active">Aktif</option>
+            <option value="inactive">Non-aktif</option>
+            <option value="suspended">Suspend</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-[var(--text-2)] mb-1.5 block">Departemen</label>
+        <input type="text" id="userDept" class="input w-full px-3 py-2 rounded-lg text-sm" placeholder="cth: IT Operations">
+      </div>
+      <div class="flex items-center gap-3 pt-3 border-t border-[var(--border)]">
+        <button type="button" class="btn-ghost flex-1 py-2.5 rounded-lg text-sm" onclick="closeUserModal()">Batal</button>
+        <button type="submit" class="btn-primary flex-1 py-2.5 rounded-lg text-sm">Simpan Pengguna</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ DELETE MODAL ============ -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+  <div class="modal-content w-full max-w-sm rounded-2xl p-6 text-center">
+    <div class="w-14 h-14 mx-auto rounded-full bg-[var(--danger-dim)] flex items-center justify-center mb-4">
+      <i class="fa-solid fa-triangle-exclamation text-[var(--danger)] text-xl"></i>
+    </div>
+    <h3 class="font-display text-xl font-bold mb-1">Hapus Pengguna?</h3>
+    <p class="text-sm text-[var(--text-2)] mb-5">Tindakan ini tidak dapat dibatalkan. Data pengguna akan dihapus permanen dari sistem.</p>
+    <div class="flex gap-3">
+      <button class="btn-ghost flex-1 py-2.5 rounded-lg text-sm" onclick="closeDeleteModal()">Batal</button>
+      <button class="btn-danger flex-1 py-2.5 rounded-lg text-sm font-medium" onclick="confirmDelete()">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TOAST CONTAINER ============ -->
+<div id="toastContainer" class="fixed top-4 right-4 z-[60] space-y-2"></div>
+
+<script>
+// =================== DATA ===================
+let users = [
+  {id:1,name:'Reza Adimulya',email:'reza.adimulya@nexus.id',role:'superadmin',status:'active',dept:'IT Operations',lastActive:'2 menit lalu',created:'2023-08-12'},
+  {id:2,name:'Sarah Wijayanti',email:'sarah.w@nexus.id',role:'admin',status:'active',dept:'HRD',lastActive:'15 menit lalu',created:'2023-09-03'},
+  {id:3,name:'Budi Santoso',email:'budi.s@nexus.id',role:'editor',status:'active',dept:'Marketing',lastActive:'1 jam lalu',created:'2023-10-21'},
+  {id:4,name:'Maya Anggraini',email:'maya.a@nexus.id',role:'editor',status:'inactive',dept:'Konten',lastActive:'3 hari lalu',created:'2023-11-15'},
+  {id:5,name:'David Pratama',email:'david.p@nexus.id',role:'admin',status:'active',dept:'Finance',lastActive:'30 menit lalu',created:'2024-01-08'},
+  {id:6,name:'Intan Permata',email:'intan.p@nexus.id',role:'viewer',status:'active',dept:'Sales',lastActive:'5 menit lalu',created:'2024-01-22'},
+  {id:7,name:'Fajar Nugroho',email:'fajar.n@nexus.id',role:'editor',status:'suspended',dept:'Produksi',lastActive:'1 minggu lalu',created:'2024-02-14'},
+  {id:8,name:'Linda Kusuma',email:'linda.k@nexus.id',role:'admin',status:'active',dept:'Operasional',lastActive:'2 jam lalu',created:'2024-03-01'},
+  {id:9,name:'Andi Hartono',email:'andi.h@nexus.id',role:'viewer',status:'active',dept:'Customer Service',lastActive:'45 menit lalu',created:'2024-03-18'},
+  {id:10,name:'Rina Marlina',email:'rina.m@nexus.id',role:'editor',status:'active',dept:'Desain',lastActive:'10 menit lalu',created:'2024-04-02'},
+  {id:11,name:'Eko Susanto',email:'eko.s@nexus.id',role:'viewer',status:'inactive',dept:'Gudang',lastActive:'2 minggu lalu',created:'2024-04-20'},
+  {id:12,name:'Putri Lestari',email:'putri.l@nexus.id',role:'admin',status:'active',dept:'Legal',lastActive:'1 jam lalu',created:'2024-05-05'},
+  {id:13,name:'Hendra Gunawan',email:'hendra.g@nexus.id',role:'viewer',status:'active',dept:'Pengadaan',lastActive:'20 menit lalu',created:'2024-05-19'},
+  {id:14,name:'Sari Handayani',email:'sari.h@nexus.id',role:'editor',status:'active',dept:'Riset',lastActive:'4 jam lalu',created:'2024-06-02'},
+];
+
+let files = [
+  {id:1,name:'Laporan-Keuangan-Q4-2024.pdf',type:'pdf',size:'4.2 MB',sizeBytes:4404019,uploaded:'2024-01-15',uploadedBy:'David Pratama',downloads:23},
+  {id:2,name:'Panduan-Brand-Guideline-v3.pdf',type:'pdf',size:'8.7 MB',sizeBytes:9122611,uploaded:'2024-01-18',uploadedBy:'Rina Marlina',downloads:45},
+  {id:3,name:'Foto-Produk-Katalog.jpg',type:'img',size:'2.1 MB',sizeBytes:2202009,uploaded:'2024-01-22',uploadedBy:'Maya Anggraini',downloads:67},
+  {id:4,name:'Data-Penjualan-2024.xlsx',type:'xls',size:'1.8 MB',sizeBytes:1887436,uploaded:'2024-02-03',uploadedBy:'David Pratama',downloads:34},
+  {id:5,name:'Presentasi-Investor.pptx',type:'doc',size:'12.4 MB',sizeBytes:13002342,uploaded:'2024-02-14',uploadedBy:'Sarah Wijayanti',downloads:18},
+  {id:6,name:'Video-Tutorial-Onboarding.mp4',type:'vid',size:'45.2 MB',sizeBytes:47395627,uploaded:'2024-02-20',uploadedBy:'Budi Santoso',downloads:89},
+  {id:7,name:'Arsip-Proyek-2023.zip',type:'zip',size:'28.5 MB',sizeBytes:29884416,uploaded:'2024-03-01',uploadedBy:'Linda Kusuma',downloads:12},
+  {id:8,name:'Kontrak-Vendor-Baru.docx',type:'doc',size:'0.8 MB',sizeBytes:838860,uploaded:'2024-03-12',uploadedBy:'Putri Lestari',downloads:7},
+  {id:10,name:'Audio-Narasi-Podcast.mp3',type:'audio',size:'15.3 MB',sizeBytes:16043212,uploaded:'2024-03-25',uploadedBy:'Sari Handayani',downloads:23},
+  {id:11,name:'Screenshot-Bug-Report.png',type:'img',size:'0.4 MB',sizeBytes:419430,uploaded:'2024-04-02',uploadedBy:'Andi Hartono',downloads:5},
+  {id:12,name:'Database-Backup-Jan.sql',type:'zip',size:'18.7 MB',sizeBytes:19629342,uploaded:'2024-04-10',uploadedBy:'Reza Adimulya',downloads:3},
+  {id:13,name:'Meeting-Minutes-Q1.docx',type:'doc',size:'0.3 MB',sizeBytes:314572,uploaded:'2024-04-18',uploadedBy:'Intan Permata',downloads:11},
+  {id:14,name:'Asset-Desain-Header.psd',type:'img',size:'32.1 MB',sizeBytes:33662382,uploaded:'2024-05-01',uploadedBy:'Rina Marlina',downloads:9},
+  {id:15,name:'Analisis-Market-Research.pdf',type:'pdf',size:'5.6 MB',sizeBytes:5872025,uploaded:'2024-05-12',uploadedBy:'Sari Handayani',downloads:28},
+  {id:16,name:'Video-Training-Safety.mp4',type:'vid',size:'62.4 MB',sizeBytes:65431820,uploaded:'2024-05-20',uploadedBy:'Hendra Gunawan',downloads:15},
+  {id:17,name:'Template-Invoice-2024.xlsx',type:'xls',size:'0.9 MB',sizeBytes:943718,uploaded:'2024-06-01',uploadedBy:'David Pratama',downloads:42},
+  {id:18,name:'NDA-Perusahaan.pdf',type:'pdf',size:'1.2 MB',sizeBytes:1258291,uploaded:'2024-06-08',uploadedBy:'Putri Lestari',downloads:6},
+  {id:19,name:'Foto-Team-Building.jpg',type:'img',size:'3.8 MB',sizeBytes:3984588,uploaded:'2024-06-15',uploadedBy:'Maya Anggraini',downloads:54},
+];
+
+let logs = [
+  {id:1,time:'2024-06-20 14:32:15',user:'Reza Adimulya',action:'login',detail:'Login berhasil dari Chrome/Windows',ip:'103.211.42.18',status:'success'},
+  {id:2,time:'2024-06-20 14:28:03',user:'Sarah Wijayanti',action:'upload',detail:'Mengunggah file Brand-Guideline-v3.pdf',ip:'103.211.42.45',status:'success'},
+  {id:3,time:'2024-06-20 14:15:42',user:'Unknown',action:'security',detail:'Upaya login gagal - password salah (3x)',ip:'45.227.89.142',status:'failed'},
+  {id:4,time:'2024-06-20 14:08:11',user:'David Pratama',action:'download',detail:'Mengunduh Data-Penjualan-2024.xlsx',ip:'103.211.42.78',status:'success'},
+  {id:5,time:'2024-06-20 13:55:33',user:'Linda Kusuma',action:'update',detail:'Memperbarui profil pengguna ID: 8',ip:'103.211.42.92',status:'success'},
+  {id:6,time:'2024-06-20 13:42:18',user:'Reza Adimulya',action:'create',detail:'Menambahkan pengguna baru: Hendra Gunawan',ip:'103.211.42.18',status:'success'},
+  {id:7,time:'2024-06-20 13:30:05',user:'Budi Santoso',action:'logout',detail:'Logout otomatis setelah 30 menit idle',ip:'103.211.42.55',status:'success'},
+  {id:8,time:'2024-06-20 13:22:47',user:'Maya Anggraini',action:'login',detail:'Login berhasil dari Safari/macOS',ip:'103.211.42.63',status:'success'},
+  {id:9,time:'2024-06-20 13:15:29',user:'Reza Adimulya',action:'delete',detail:'Menghapus file lama: temp-cache.zip',ip:'103.211.42.18',status:'success'},
+  {id:10,time:'2024-06-20 13:02:14',user:'Unknown',action:'security',detail:'Akses tidak sah ke endpoint /admin/console',ip:'193.27.14.88',status:'blocked'},
+  {id:11,time:'2024-06-20 12:48:51',user:'Intan Permata',action:'download',detail:'Mengunduh Meeting-Minutes-Q1.docx',ip:'103.211.42.101',status:'success'},
+  {id:12,time:'2024-06-20 12:35:09',user:'Putri Lestari',action:'update',detail:'Mengubah role pengguna: Andi Hartono → Viewer',ip:'103.211.42.77',status:'success'},
+  {id:13,time:'2024-06-20 12:20:33',user:'Rina Marlina',action:'upload',detail:'Mengunggah Asset-Desain-Header.psd',ip:'103.211.42.65',status:'success'},
+  {id:14,time:'2024-06-20 12:08:18',user:'Fajar Nugroho',action:'login',detail:'Upaya login - akun di-suspend',ip:'103.211.42.88',status:'failed'},
+  {id:15,time:'2024-06-20 11:55:42',user:'Reza Adimulya',action:'update',detail:'Mengubah pengaturan keamanan: 2FA wajib',ip:'103.211.42.18',status:'success'},
+  {id:16,time:'2024-06-20 11:42:07',user:'Sari Handayani',action:'download',detail:'Mengunduh Analisis-Market-Research.pdf',ip:'103.211.42.95',status:'success'},
+  {id:17,time:'2024-06-20 11:28:55',user:'David Pratama',action:'upload',detail:'Mengunggah Template-Invoice-2024.xlsx',ip:'103.211.42.78',status:'success'},
+  {id:18,time:'2024-06-20 11:15:23',user:'Sarah Wijayanti',action:'logout',detail:'Logout manual',ip:'103.211.42.45',status:'success'},
+  {id:19,time:'2024-06-20 11:02:48',user:'Hendra Gunawan',action:'login',detail:'Login berhasil dari Edge/Windows',ip:'103.211.42.110',status:'success'},
+  {id:20,time:'2024-06-20 10:48:19',user:'Reza Adimulya',action:'security',detail:'Memblokir IP mencurigakan: 193.27.14.88',ip:'103.211.42.18',status:'success'},
+  {id:21,time:'2024-06-20 10:35:02',user:'Andi Hartono',action:'download',detail:'Mengunduh Screenshot-Bug-Report.png',ip:'103.211.42.84',status:'success'},
+  {id:22,time:'2024-06-20 10:22:36',user:'Linda Kusuma',action:'login',detail:'Login berhasil dari Firefox/Linux',ip:'103.211.42.92',status:'success'},
+  {id:23,time:'2024-06-20 10:08:14',user:'Putri Lestari',action:'upload',detail:'Mengunggah NDA-Perusahaan.pdf',ip:'103.211.42.77',status:'success'},
+  {id:24,time:'2024-06-20 09:55:51',user:'Maya Anggraini',action:'create',detail:'Membuat folder baru: Project-2024-Q2',ip:'103.211.42.63',status:'success'},
+];
+
+// =================== STATE ===================
+let currentView = 'dashboard';
+let userCurrentPage = 1, userPerPage = 10;
+let logCurrentPage = 1, logPerPage = 10;
+let fileViewMode = 'grid';
+let selectedUsers = new Set();
+let deleteTargetId = null;
+
+// =================== INIT ===================
+document.addEventListener('DOMContentLoaded', () => {
+  setCurrentDate();
+  renderChart();
+  renderActivityFeed();
+  renderStorageBreakdown();
+  renderRoleDistribution();
+  renderUsers();
+  renderFiles();
+  renderLogs();
+  updateSidebarCounts();
+  bindEvents();
+});
+
+function setCurrentDate(){
+  const d = new Date();
+  const opts = {weekday:'long', day:'numeric', month:'long', year:'numeric'};
+  document.getElementById('currentDate').textContent = d.toLocaleDateString('id-ID', opts);
+}
+
+function updateSidebarCounts(){
+  document.getElementById('sidebarUserCount').textContent = users.length;
+  document.getElementById('sidebarFileCount').textContent = files.length;
+  document.getElementById('statUsers').textContent = users.length;
+  document.getElementById('filesTotalCount').textContent = files.length;
+}
+
+// =================== NAVIGATION ===================
+document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
+  item.addEventListener('click', () => switchView(item.dataset.view));
+});
+
+function switchView(view){
+  currentView = view;
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  document.querySelector(`.sidebar-item[data-view="${view}"]`)?.classList.add('active');
+  document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+  document.getElementById(`view-${view}`)?.classList.remove('hidden');
+  
+  const labels = {dashboard:'Dashboard', users:'Manajemen User', files:'Storage File', logs:'Log Aktivitas'};
+  document.getElementById('breadcrumb').textContent = labels[view];
+}
+
+// =================== DASHBOARD ===================
+function renderChart(){
+  const days = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
+  // Data: [login, file_ops, admin]
+  const data = [
+    [42,28,12],
+    [55,32,18],
+    [48,25,15],
+    [62,38,22],
+    [70,42,28],
+    [35,18,8],
+    [28,15,5]
+  ];
+  const max = Math.max(...data.map(d => d.reduce((a,b)=>a+b,0)));
+  
+  const container = document.getElementById('chartContainer');
+  container.innerHTML = data.map((d, i) => {
+    const total = d.reduce((a,b)=>a+b,0);
+    const heightPct = (total/max)*100;
+    const loginPct = (d[0]/total)*100;
+    const filePct = (d[1]/total)*100;
+    const adminPct = (d[2]/total)*100;
+    return `
+      <div class="flex-1 flex flex-col items-center gap-2 group">
+        <div class="text-[10px] font-mono text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition">${total} aksi</div>
+        <div class="w-full flex flex-col-reverse h-full justify-start" style="height:${heightPct}%; max-height:200px">
+          <div class="chart-bar w-full" style="height:${loginPct}%; background:linear-gradient(180deg, var(--accent) 0%, rgba(0,255,163,.3) 100%)"></div>
+          <div class="chart-bar w-full" style="height:${filePct}%; background:linear-gradient(180deg, var(--info) 0%, rgba(94,234,212,.3) 100%)"></div>
+          <div class="chart-bar w-full" style="height:${adminPct}%; background:linear-gradient(180deg, var(--warning) 0%, rgba(255,181,71,.3) 100%)"></div>
+        </div>
+        <div class="text-xs text-[var(--text-2)] font-medium">${days[i]}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderActivityFeed(){
+  const recent = logs.slice(0, 6).reverse();
+  const icons = {
+    login:'fa-right-to-bracket', logout:'fa-right-from-bracket',
+    upload:'fa-cloud-arrow-up', download:'fa-cloud-arrow-down',
+    create:'fa-user-plus', update:'fa-pen-to-square', delete:'fa-trash',
+    security:'fa-shield-halved'
+  };
+  const colors = {
+    login:'var(--accent)', logout:'var(--text-muted)',
+    upload:'var(--info)', download:'var(--info)',
+    create:'var(--accent)', update:'var(--warning)',
+    delete:'var(--danger)', security:'var(--danger)'
+  };
+  
+  document.getElementById('activityFeed').innerHTML = recent.map(l => `
+    <div class="activity-item">
+      <div class="activity-dot" style="border-color:${colors[l.action]}"></div>
+      <div class="flex items-start gap-2 pb-1">
+        <i class="fa-solid ${icons[l.action]} text-[10px] mt-1" style="color:${colors[l.action]}"></i>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-[var(--text)] leading-tight"><span class="font-medium">${l.user}</span> <span class="text-[var(--text-2)]">${l.detail}</span></div>
+          <div class="text-[10px] text-[var(--text-muted)] font-mono mt-0.5">${formatRelativeTime(l.time)}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderStorageBreakdown(){
+  const types = [
+    {name:'PDF', color:'#ff3d6e', size:19.7, percent:42},
+    {name:'Video', color:'#5eead4', size:107.6, percent:23},
+    {name:'Gambar', color:'#ffb547', size:38.4, percent:18},
+    {name:'Dokumen', color:'#a78bfa', size:13.5, percent:11},
+  ];
+  document.getElementById('storageBreakdown').innerHTML = types.map(t => `
+    <div class="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2 h-2 rounded-sm" style="background:${t.color}"></span>
+        <span class="text-xs text-[var(--text-2)]">${t.name}</span>
+      </div>
+      <div class="font-display font-bold text-lg">${t.size} <span class="text-xs text-[var(--text-muted)]">MB</span></div>
+      <div class="text-[10px] text-[var(--text-muted)] font-mono mt-0.5">${t.percent}% dari total</div>
+    </div>
+  `).join('');
+}
+
+function renderRoleDistribution(){
+  const roles = ['superadmin','admin','editor','viewer'];
+  const colors = {superadmin:'#ff3d6e', admin:'#ffb547', editor:'#00ffa3', viewer:'#5eead4'};
+  const labels = {superadmin:'Super Admin', admin:'Admin', editor:'Editor', viewer:'Viewer'};
+  
+  document.getElementById('roleDistribution').innerHTML = roles.map(r => {
+    const count = users.filter(u => u.role === r).length;
+    const pct = (count/users.length)*100;
+    return `
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-sm" style="background:${colors[r]}"></span>
+            <span class="text-xs text-[var(--text-2)]">${labels[r]}</span>
+          </div>
+          <span class="font-mono text-xs text-[var(--text-muted)]">${count}</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%; background:${colors[r]}"></div></div>
+      </div>
+    `;
+  }).join('');
+}
+
+// =================== USERS ===================
+function renderUsers(){
+  const search = document.getElementById('userSearch').value.toLowerCase();
+  const roleF = document.getElementById('userRoleFilter').value;
+  const statusF = document.getElementById('userStatusFilter').value;
+  
+  let filtered = users.filter(u => {
+    const matchSearch = !search || u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search);
+    const matchRole = !roleF || u.role === roleF;
+    const matchStatus = !statusF || u.status === statusF;
+    return matchSearch && matchRole && matchStatus;
+  });
+  
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / userPerPage));
+  if(userCurrentPage > totalPages) userCurrentPage = totalPages;
+  const start = (userCurrentPage-1) * userPerPage;
+  const end = Math.min(start + userPerPage, total);
+  const pageData = filtered.slice(start, end);
+  
+  const roleColors = {superadmin:'danger', admin:'warning', editor:'success', viewer:'info'};
+  const roleLabels = {superadmin:'Super Admin', admin:'Admin', editor:'Editor', viewer:'Viewer'};
+  const statusColors = {active:'success', inactive:'muted', suspended:'danger'};
+  const statusLabels = {active:'Aktif', inactive:'Non-aktif', suspended:'Suspend'};
+  
+  document.getElementById('usersTableBody').innerHTML = pageData.length ? pageData.map(u => `
+    <tr class="data-row border-t border-[var(--border)]">
+      <td class="px-4 py-3"><div class="checkbox ${selectedUsers.has(u.id)?'checked':''}" onclick="toggleUser(${u.id}, this)"></div></td>
+      <td class="px-4 py-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--surface-3)] to-[var(--surface-2)] border border-[var(--border-light)] flex items-center justify-center text-xs font-bold text-[var(--accent)]">${u.name.split(' ').map(n=>n[0]).slice(0,2).join('')}</div>
+          <div>
+            <div class="font-medium text-sm">${u.name}</div>
+            <div class="text-xs text-[var(--text-muted)]">${u.email}</div>
+          </div>
+        </div>
+      </td>
+      <td class="px-4 py-3"><span class="badge badge-${roleColors[u.role]}">${roleLabels[u.role]}</span></td>
+      <td class="px-4 py-3"><span class="badge badge-${statusColors[u.status]}"><span class="w-1.5 h-1.5 rounded-full" style="background:currentColor"></span>${statusLabels[u.status]}</span></td>
+      <td class="px-4 py-3 text-xs text-[var(--text-2)] font-mono">${u.lastActive}</td>
+      <td class="px-4 py-3 text-xs text-[var(--text-muted)] font-mono">${u.created}</td>
+      <td class="px-4 py-3">
+        <div class="flex items-center justify-end gap-1">
+          <button class="w-7 h-7 rounded-md hover:bg-[var(--surface-3)] text-[var(--text-2)] hover:text-[var(--info)]" onclick="viewUser(${u.id})" title="Lihat"><i class="fa-solid fa-eye text-xs"></i></button>
+          <button class="w-7 h-7 rounded-md hover:bg-[var(--surface-3)] text-[var(--text-2)] hover:text-[var(--warning)]" onclick="openUserModal(${u.id})" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
+          <button class="w-7 h-7 rounded-md hover:bg-[var(--surface-3)] text-[var(--text-2)] hover:text-[var(--danger)]" onclick="openDeleteModal(${u.id})" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>
+        </div>
+      </td>
+    </tr>
+  `).join('') : `
+    <tr><td colspan="7" class="px-4 py-12 text-center">
+      <i class="fa-solid fa-user-slash text-3xl text-[var(--text-muted)] mb-3"></i>
+      <div class="text-sm text-[var(--text-2)]">Tidak ada pengguna ditemukan</div>
+      <div class="text-xs text-[var(--text-muted)] mt-1">Coba ubah filter pencarian</div>
+    </td></tr>
+  `;
+  
+  document.getElementById('userResultInfo').textContent = `${total} hasil`;
+  document.getElementById('userShowingStart').textContent = total ? start+1 : 0;
+  document.getElementById('userShowingEnd').textContent = end;
+  document.getElementById('userTotal').textContent = total;
+  
+  renderPagination('userPagination', userCurrentPage, totalPages, p => { userCurrentPage = p; renderUsers(); });
+}
+
+function toggleUser(id, el){
+  if(selectedUsers.has(id)){ selectedUsers.delete(id); el.classList.remove('checked'); }
+  else{ selectedUsers.add(id); el.classList.add('checked'); }
+}
+
+function toggleAllUsers(el){
+  const checks = document.querySelectorAll('#usersTableBody .checkbox');
+  if(el.classList.contains('checked')){
+    el.classList.remove('checked');
+    checks.forEach(c => c.classList.remove('checked'));
+    selectedUsers.clear();
+  } else {
+    el.classList.add('checked');
+    checks.forEach(c => c.classList.add('checked'));
+    document.querySelectorAll('#usersTableBody tr').forEach(tr => {
+      const cb = tr.querySelector('.checkbox');
+      if(cb && cb.classList.contains('checked')){
+        const id = parseInt(tr.querySelector('button[onclick*="viewUser"]')?.getAttribute('onclick').match(/\d+/)[0]);
+        if(id) selectedUsers.add(id);
+      }
+    });
+  }
+}
+
+function resetUserFilter(){
+  document.getElementById('userSearch').value = '';
+  document.getElementById('userRoleFilter').value = '';
+  document.getElementById('userStatusFilter').value = '';
+  userCurrentPage = 1;
+  renderUsers();
+}
+
+function openUserModal(id){
+  document.getElementById('userModalTitle').textContent = id ? 'Edit Pengguna' : 'Tambah Pengguna';
+  if(id){
+    const u = users.find(x => x.id === id);
+    document.getElementById('userId').value = u.id;
+    document.getElementById('userName').value = u.name;
+    document.getElementById('userEmail').value = u.email;
+    document.getElementById('userRole').value = u.role;
+    document.getElementById('userStatus').value = u.status;
+    document.getElementById('userDept').value = u.dept;
+  } else {
+    document.getElementById('userForm').reset();
+    document.getElementById('userId').value = '';
+  }
+  const modal = document.getElementById('userModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeUserModal(){
+  const modal = document.getElementById('userModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+document.getElementById('userForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const id = document.getElementById('userId').value;
+  const data = {
+    name: document.getElementById('userName').value,
+    email: document.getElementById('userEmail').value,
+    role: document.getElementById('userRole').value,
+    status: document.getElementById('userStatus').value,
+    dept: document.getElementById('userDept').value || '-',
+  };
+  if(id){
+    const u = users.find(x => x.id === parseInt(id));
+    Object.assign(u, data);
+    u.lastActive = 'Baru saja diperbarui';
+    showToast(`Pengguna "${data.name}" berhasil diperbarui`, 'success');
+  } else {
+    users.unshift({
+      id: Math.max(0, ...users.map(u=>u.id)) + 1,
+      ...data,
+      lastActive: 'Baru saja',
+      created: new Date().toISOString().split('T')[0]
+    });
+    showToast(`Pengguna baru "${data.name}" ditambahkan`, 'success');
+  }
+  closeUserModal();
+  renderUsers();
+  updateSidebarCounts();
+  renderRoleDistribution();
+});
+
+function openDeleteModal(id){
+  deleteTargetId = id;
+  const u = users.find(x => x.id === id);
+  const modal = document.getElementById('deleteModal');
+  modal.querySelector('p').textContent = `Tindakan ini tidak dapat dibatalkan. Data ${u.name} akan dihapus permanen dari sistem.`;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeDeleteModal(){
+  document.getElementById('deleteModal').classList.add('hidden');
+  document.getElementById('deleteModal').classList.remove('flex');
+  deleteTargetId = null;
+}
+
+function confirmDelete(){
+  if(!deleteTargetId) return;
+  const u = users.find(x => x.id === deleteTargetId);
+  users = users.filter(x => x.id !== deleteTargetId);
+  showToast(`Pengguna "${u.name}" telah dihapus`, 'danger');
+  closeDeleteModal();
+  renderUsers();
+  updateSidebarCounts();
+  renderRoleDistribution();
+}
+
+function viewUser(id){
+  const u = users.find(x => x.id === id);
+  showToast(`Menampilkan profil: ${u.name} (${u.email})`, 'info');
+}
+
+// =================== FILES ===================
+function renderFiles(){
+  const search = document.getElementById('fileSearch').value.toLowerCase();
+  const typeF = document.getElementById('fileTypeFilter').value;
+  const sort = document.getElementById('fileSort').value;
+  
+  let filtered = files.filter(f => {
+    const matchSearch = !search || f.name.toLowerCase().includes(search);
+    const matchType = !typeF || f.type === typeF;
+    return matchSearch && matchType;
+  });
+  
+  filtered.sort((a,b) => {
+    switch(sort){
+      case 'date-desc': return b.uploaded.localeCompare(a.uploaded);
+      case 'date-asc': return a.uploaded.localeCompare(b.uploaded);
+      case 'size-desc': return b.sizeBytes - a.sizeBytes;
+      case 'size-asc': return a.sizeBytes - b.sizeBytes;
+      case 'name-asc': return a.name.localeCompare(b.name);
+      default: return 0;
+    }
+  });
+  
+  document.getElementById('fileResultInfo').textContent = `${filtered.length} hasil`;
+  
+  const container = document.getElementById('filesContainer');
+  if(!filtered.length){
+    container.innerHTML = `<div class="card p-12 text-center">
+      <i class="fa-solid fa-folder-open text-3xl text-[var(--text-muted)] mb-3"></i>
+      <div class="text-sm text-[var(--text-2)]">Tidak ada file ditemukan</div>
+    </div>`;
+    return;
+  }
+  
+  const typeConfig = {
+    pdf:{icon:'fa-file-pdf', color:'#ff3d6e', label:'PDF'},
+    doc:{icon:'fa-file-word', color:'#5eead4', label:'DOC'},
+    xls:{icon:'fa-file-excel', color:'#00ffa3', label:'XLS'},
+    img:{icon:'fa-file-image', color:'#ffb547', label:'IMG'},
+    vid:{icon:'fa-file-video', color:'#a78bfa', label:'VID'},
+    zip:{icon:'fa-file-zipper', color:'#fb923c', label:'ZIP'},
+    audio:{icon:'fa-file-audio', color:'#f472b6', label:'AUDIO'},
+  };
+  
+  if(fileViewMode === 'grid'){
+    container.className = 'grid grid-cols-4 gap-4';
+    container.innerHTML = filtered.map(f => {
+      const tc = typeConfig[f.type] || typeConfig.doc;
+      return `
+        <div class="file-card p-4" style="--file-color:${tc.color}">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-11 h-11 rounded-lg flex items-center justify-center" style="background:${tc.color}22">
+              <i class="fa-solid ${tc.icon} text-lg" style="color:${tc.color}"></i>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded" style="background:${tc.color}22;color:${tc.color}">${tc.label}</span>
+          </div>
+          <div class="text-sm font-medium leading-tight mb-1 line-clamp-2" title="${f.name}">${f.name}</div>
+          <div class="text-[10px] text-[var(--text-muted)] font-mono mb-3">${f.size} · ${f.downloads}× diunduh</div>
+          <div class="text-[10px] text-[var(--text-muted)] mb-3 truncate"><i class="fa-solid fa-user mr-1"></i>${f.uploadedBy}</div>
+          <div class="flex items-center gap-2 pt-3 border-t border-[var(--border)]">
+            <button class="flex-1 btn-ghost py-1.5 rounded-md text-xs flex items-center justify-center gap-1.5" onclick="downloadFile(${f.id})"><i class="fa-solid fa-download"></i> Unduh</button>
+            <button class="w-7 h-7 rounded-md hover:bg-[var(--surface-3)] text-[var(--text-2)] hover:text-[var(--danger)]" onclick="deleteFile(${f.id})" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    container.className = '';
+    container.innerHTML = `<div class="card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-[var(--surface-2)] text-[var(--text-muted)] text-[10px] font-mono tracking-widest uppercase">
+          <th class="text-left px-4 py-3">File</th>
+          <th class="text-left px-4 py-3">Tipe</th>
+          <th class="text-left px-4 py-3">Ukuran</th>
+          <th class="text-left px-4 py-3">Diunggah Oleh</th>
+          <th class="text-left px-4 py-3">Tanggal</th>
+          <th class="text-left px-4 py-3">Unduhan</th>
+          <th class="text-right px-4 py-3">Aksi</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.map(f => {
+            const tc = typeConfig[f.type] || typeConfig.doc;
+            return `<tr class="data-row border-t border-[var(--border)]">
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:${tc.color}22"><i class="fa-solid ${tc.icon}" style="color:${tc.color}"></i></div>
+                  <div class="font-medium text-sm">${f.name}</div>
+                </div>
+              </td>
+              <td class="px-4 py-3"><span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded" style="background:${tc.color}22;color:${tc.color}">${tc.label}</span></td>
+              <td class="px-4 py-3 text-xs font-mono text-[var(--text-2)]">${f.size}</td>
+              <td class="px-4 py-3 text-xs text-[var(--text-2)]">${f.uploadedBy}</td>
+              <td class="px-4 py-3 text-xs font-mono text-[var(--text-muted)]">${f.uploaded}</td>
+              <td class="px-4 py-3 text-xs font-mono text-[var(--text-muted)]">${f.downloads}×</td>
+              <td class="px-4 py-3"><div class="flex items-center justify-end gap-1">
+                <button class="w-7 h-7 rounded-md hover:bg-[var(--surface-3)] text-[var(--text-2)] hover:text-[var(--accent)]" onclick="downloadFile(${f.id})" title="Unduh"><i class="fa-solid fa-download text-xs"></i></button>
+                <button class="w-7 h-7 rounded-md hover:bg-[var(--surface-3)] text-[var(--text-2)] hover:text-[var(--danger)]" onclick="deleteFile(${f.id})" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>
+              </div></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+}
+
+function setFileView(mode){
+  fileViewMode = mode;
+  document.querySelectorAll('.view-toggle').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  renderFiles();
+}
+
+function downloadFile(id){
+  const f = files.find(x => x.id === id);
+  f.downloads++;
+  showToast(`Mengunduh "${f.name}" (${f.size})`, 'success');
+  renderFiles();
+}
+
+function deleteFile(id){
+  const f = files.find(x => x.id === id);
+  files = files.filter(x => x.id !== id);
+  showToast(`File "${f.name}" dihapus`, 'danger');
+  renderFiles();
+  updateSidebarCounts();
+}
+
+// =================== LOGS ===================
+function renderLogs(){
+  const search = document.getElementById('logSearch').value.toLowerCase();
+  const actionF = document.getElementById('logActionFilter').value;
+  const dateF = document.getElementById('logDateFilter').value;
+  
+  let filtered = logs.filter(l => {
+    const matchSearch = !search || l.user.toLowerCase().includes(search) || l.detail.toLowerCase().includes(search) || l.ip.includes(search);
+    const matchAction = !actionF || l.action === actionF;
+    let matchDate = true;
+    if(dateF){
+      const logDate = new Date(l.time);
+      const now = new Date('2024-06-20T23:59:59');
+      const diff = (now - logDate) / (1000*60*60*24);
+      if(dateF === 'today') matchDate = diff < 1;
+      else if(dateF === 'yesterday') matchDate = diff >= 1 && diff < 2;
+      else if(dateF === 'week') matchDate = diff < 7;
+    }
+    return matchSearch && matchAction && matchDate;
+  });
+  
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / logPerPage));
+  if(logCurrentPage > totalPages) logCurrentPage = totalPages;
+  const start = (logCurrentPage-1) * logPerPage;
+  const end = Math.min(start + logPerPage, total);
+  const pageData = filtered.slice(start, end);
+  
+  const actionConfig = {
+    login:{icon:'fa-right-to-bracket', color:'var(--accent)', label:'Login'},
+    logout:{icon:'fa-right-from-bracket', color:'var(--text-muted)', label:'Logout'},
+    upload:{icon:'fa-cloud-arrow-up', color:'var(--info)', label:'Upload'},
+    download:{icon:'fa-cloud-arrow-down', color:'var(--info)', label:'Download'},
+    create:{icon:'fa-user-plus', color:'var(--accent)', label:'Create User'},
+    update:{icon:'fa-pen-to-square', color:'var(--warning)', label:'Update'},
+    delete:{icon:'fa-trash', color:'var(--danger)', label:'Delete'},
+    security:{icon:'fa-shield-halved', color:'var(--danger)', label:'Security'},
+  };
+  
+  document.getElementById('logsTableBody').innerHTML = pageData.length ? pageData.map((l, i) => {
+    const ac = actionConfig[l.action];
+    return `
+      <tr class="data-row border-t border-[var(--border)]">
+        <td class="px-4 py-3 text-xs font-mono text-[var(--text-muted)]">${start+i+1}</td>
+        <td class="px-4 py-3">
+          <div class="text-xs font-mono text-[var(--text-2)]">${l.time.split(' ')[0]}</div>
+          <div class="text-xs font-mono text-[var(--text-muted)]">${l.time.split(' ')[1]}</div>
+        </td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-[var(--surface-3)] border border-[var(--border-light)] flex items-center justify-center text-[10px] font-bold text-[var(--accent)]">${l.user === 'Unknown' ? '?' : l.user.split(' ').map(n=>n[0]).slice(0,2).join('')}</div>
+            <span class="text-sm ${l.user === 'Unknown' ? 'text-[var(--danger)]' : ''}">${l.user}</span>
+          </div>
+        </td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:${ac.color}22"><i class="fa-solid ${ac.icon} text-xs" style="color:${ac.color}"></i></div>
+            <span class="text-xs font-medium" style="color:${ac.color}">${ac.label}</span>
+          </div>
+        </td>
+        <td class="px-4 py-3 text-xs text-[var(--text-2)] max-w-xs">${l.detail}</td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-globe text-[10px] text-[var(--text-muted)]"></i>
+            <span class="text-xs font-mono text-[var(--text-2)]">${l.ip}</span>
+            <button class="text-[var(--text-muted)] hover:text-[var(--accent)]" onclick="copyToClipboard('${l.ip}')" title="Salin IP"><i class="fa-solid fa-copy text-[10px]"></i></button>
+          </div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          ${l.status === 'success' ? '<span class="badge badge-success"><i class="fa-solid fa-check text-[8px]"></i> OK</span>' : 
+            l.status === 'failed' ? '<span class="badge badge-danger"><i class="fa-solid fa-xmark text-[8px]"></i> Gagal</span>' :
+            '<span class="badge badge-warning"><i class="fa-solid fa-ban text-[8px]"></i> Blok</span>'}
+        </td>
+      </tr>
+    `;
+  }).join('') : `
+    <tr><td colspan="7" class="px-4 py-12 text-center">
+      <i class="fa-solid fa-clipboard-list text-3xl text-[var(--text-muted)] mb-3"></i>
+      <div class="text-sm text-[var(--text-2)]">Tidak ada log ditemukan</div>
+    </td></tr>
+  `;
+  
+  // Update stats
+  document.getElementById('logTotal').textContent = logs.length;
+  document.getElementById('logLogin').textContent = logs.filter(l => l.action === 'login' || l.action === 'logout').length;
+  document.getElementById('logFile').textContent = logs.filter(l => l.action === 'upload' || l.action === 'download').length;
+  document.getElementById('logAdmin').textContent = logs.filter(l => ['create','update','delete'].includes(l.action)).length;
+  document.getElementById('logSec').textContent = logs.filter(l => l.action === 'security').length;
+  
+  document.getElementById('logResultInfo').textContent = `${total} hasil`;
+  document.getElementById('logShowingStart').textContent = total ? start+1 : 0;
+  document.getElementById('logShowingEnd').textContent = end;
+  document.getElementById('logTotalEntries').textContent = total;
+  
+  renderPagination('logPagination', logCurrentPage, totalPages, p => { logCurrentPage = p; renderLogs(); });
+}
+
+function exportLogs(){
+  const headers = ['Waktu','Pengguna','Aksi','Detail','IP','Status'];
+  const rows = logs.map(l => [l.time, l.user, l.action, l.detail, l.ip, l.status]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `log-aktivitas-${Date.now()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Log berhasil diekspor ke CSV', 'success');
+}
+
+function copyToClipboard(text){
+  navigator.clipboard?.writeText(text);
+  showToast(`IP ${text} disalin`, 'info');
+}
+
+// =================== PAGINATION ===================
+function renderPagination(containerId, current, total, onClick){
+  const container = document.getElementById(containerId);
+  if(total <= 1){ container.innerHTML = ''; return; }
+  
+  let html = '';
+  html += `<button class="px-2.5 py-1.5 rounded-md text-xs ${current === 1 ? 'text-[var(--text-muted)] cursor-not-allowed' : 'text-[var(--text-2)] hover:bg-[var(--surface-2)]'}" ${current === 1 ? 'disabled' : `onclick="(${onClick.toString()})(${current-1})"`}><i class="fa-solid fa-chevron-left text-[10px]"></i></button>`;
+  
+  for(let i = 1; i <= total; i++){
+    if(i === 1 || i === total || Math.abs(i - current) <= 1){
+      html += `<button class="px-2.5 py-1.5 rounded-md text-xs font-mono ${i === current ? 'bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent)]' : 'text-[var(--text-2)] hover:bg-[var(--surface-2)]'}" onclick="(${onClick.toString()})(${i})">${i}</button>`;
+    } else if(Math.abs(i - current) === 2){
+      html += `<span class="px-1 text-[var(--text-muted)] text-xs">···</span>`;
+    }
+  }
+  
+  html += `<button class="px-2.5 py-1.5 rounded-md text-xs ${current === total ? 'text-[var(--text-muted)] cursor-not-allowed' : 'text-[var(--text-2)] hover:bg-[var(--surface-2)]'}" ${current === total ? 'disabled' : `onclick="(${onClick.toString()})(${current+1})"`}><i class="fa-solid fa-chevron-right text-[10px]"></i></button>`;
+  
+  container.innerHTML = html;
+}
+
+// =================== TOAST ===================
+function showToast(message, type = 'info'){
+  const config = {
+    success:{icon:'fa-circle-check', color:'var(--accent)'},
+    danger:{icon:'fa-circle-exclamation', color:'var(--danger)'},
+    warning:{icon:'fa-triangle-exclamation', color:'var(--warning)'},
+    info:{icon:'fa-circle-info', color:'var(--info)'},
+  };
+  const c = config[type];
+  const toast = document.createElement('div');
+  toast.className = 'toast rounded-lg px-4 py-3 flex items-center gap-3 min-w-[280px] max-w-md';
+  toast.innerHTML = `
+    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:${c.color}22"><i class="fa-solid ${c.icon}" style="color:${c.color}"></i></div>
+    <div class="text-sm flex-1">${message}</div>
+    <button class="text-[var(--text-muted)] hover:text-[var(--text)] text-xs"><i class="fa-solid fa-xmark"></i></button>
+  `;
+  document.getElementById('toastContainer').appendChild(toast);
+  toast.querySelector('button').onclick = () => toast.remove();
+  setTimeout(() => {
+    toast.style.transition = 'all .3s ease';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(120%)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+
+// =================== EVENTS ===================
+function bindEvents(){
+  document.getElementById('userSearch').addEventListener('input', () => { userCurrentPage = 1; renderUsers(); });
+  document.getElementById('userRoleFilter').addEventListener('change', () => { userCurrentPage = 1; renderUsers(); });
+  document.getElementById('userStatusFilter').addEventListener('change', () => { userCurrentPage = 1; renderUsers(); });
+  
+  document.getElementById('fileSearch').addEventListener('input', renderFiles);
+  document.getElementById('fileTypeFilter').addEventListener('change', renderFiles);
+  document.getElementById('fileSort').addEventListener('change', renderFiles);
+  
+  document.getElementById('logSearch').addEventListener('input', () => { logCurrentPage = 1; renderLogs(); });
+  document.getElementById('logActionFilter').addEventListener('change', () => { logCurrentPage = 1; renderLogs(); });
+  document.getElementById('logDateFilter').addEventListener('change', () => { logCurrentPage = 1; renderLogs(); });
+  
+  // Global search shortcut
+  document.addEventListener('keydown', e => {
+    if((e.ctrlKey || e.metaKey) && e.key === 'k'){
+      e.preventDefault();
+      document.getElementById('globalSearch').focus();
+    }
+    if(e.key === 'Escape'){
+      closeUserModal();
+      closeDeleteModal();
+    }
+  });
+  
+  // Global search redirect
+  document.getElementById('globalSearch').addEventListener('keypress', e => {
+    if(e.key === 'Enter'){
+      const q = e.target.value.toLowerCase();
+      if(q){
+        // Try to find in users
+        const userMatch = users.find(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+        if(userMatch){ switchView('users'); document.getElementById('userSearch').value = e.target.value; renderUsers(); return; }
+        const fileMatch = files.find(f => f.name.toLowerCase().includes(q));
+        if(fileMatch){ switchView('files'); document.getElementById('fileSearch').value = e.target.value; renderFiles(); return; }
+        switchView('logs');
+        document.getElementById('logSearch').value = e.target.value;
+        renderLogs();
+      }
+    }
+  });
+  
+  // Click outside modal to close
+  document.getElementById('userModal').addEventListener('click', e => {
+    if(e.target.id === 'userModal') closeUserModal();
+  });
+  document.getElementById('deleteModal').addEventListener('click', e => {
+    if(e.target.id === 'deleteModal') closeDeleteModal();
+  });
+}
+
+function formatRelativeTime(timeStr){
+  const d = new Date(timeStr);
+  const now = new Date('2024-06-20T15:00:00');
+  const diff = (now - d) / 60000;
+  if(diff < 1) return 'Baru saja';
+  if(diff < 60) return `${Math.floor(diff)} menit lalu`;
+  if(diff < 1440) return `${Math.floor(diff/60)} jam lalu`;
+  return `${Math.floor(diff/1440)} hari lalu`;
+}
+</script>
+</body>
+</html>
