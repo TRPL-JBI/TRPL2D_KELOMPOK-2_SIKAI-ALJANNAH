@@ -9,6 +9,7 @@ use App\Services\FileRenamer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use App\Models\LogSuperadmin;
 
 class AdminWebController extends Controller
 {
@@ -64,6 +65,14 @@ class AdminWebController extends Controller
 
         Category::create($data);
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Menambahkan kategori: ' . $data['name'],
+            'modul' => 'admin_web',
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->route('adminweb.posts')->with('success', 'Kategori "' . e($data['name']) . '" berhasil ditambahkan.');
     }
 
@@ -86,6 +95,15 @@ class AdminWebController extends Controller
             'published_at' => now(),
         ]);
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'update',
+            'deskripsi' => 'Menerbitkan postingan: ' . $post->title,
+            'modul' => 'admin_web',
+            'referensi_id' => $post->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->route('adminweb.posts')->with('success', 'Postingan "' . e($post->title) . '" berhasil diterbitkan.');
     }
 
@@ -93,6 +111,16 @@ class AdminWebController extends Controller
     {
         $post = Post::findOrFail($id);
         $title = $post->title;
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'delete',
+            'deskripsi' => 'Menghapus postingan: ' . $title,
+            'modul' => 'admin_web',
+            'referensi_id' => $post->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         $post->delete();
 
         return redirect()->route('adminweb.posts')->with('success', 'Postingan "' . e($title) . '" berhasil dihapus.');
@@ -148,11 +176,29 @@ class AdminWebController extends Controller
                 'content' => json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
             ]);
 
+            LogSuperadmin::create([
+                'user_id' => auth()->id(),
+                'aksi' => 'update',
+                'deskripsi' => 'Memperbarui halaman beranda',
+                'modul' => 'admin_web',
+                'referensi_id' => $page->id,
+                'ip_address' => request()->ip(),
+            ]);
+
             return redirect()->route('adminweb.pages.edit', $id)
                 ->with('success', 'Halaman Beranda berhasil diperbarui.');
         }
 
         $page->update($request->only(['title', 'content']));
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'update',
+            'deskripsi' => 'Memperbarui halaman: ' . $page->title,
+            'modul' => 'admin_web',
+            'referensi_id' => $page->id,
+            'ip_address' => request()->ip(),
+        ]);
 
         return redirect()->route('adminweb.pages.edit', $id)
             ->with('success', 'Halaman "' . e($page->title) . '" berhasil diperbarui.');
@@ -203,6 +249,15 @@ class AdminWebController extends Controller
             'slug' => $data['slug'],
             'content' => '',
             'status' => 'draft',
+        ]);
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Menambahkan halaman baru: ' . $data['title'],
+            'modul' => 'admin_web',
+            'referensi_id' => $page->id,
+            'ip_address' => request()->ip(),
         ]);
 
         return redirect()->route('adminweb.pages.builder', $page->id)
@@ -278,6 +333,16 @@ class AdminWebController extends Controller
     {
         $page = Page::findOrFail($id);
         $title = $page->title;
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'delete',
+            'deskripsi' => 'Menghapus halaman: ' . $title,
+            'modul' => 'admin_web',
+            'referensi_id' => $page->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         $page->delete();
 
         return redirect()->route('adminweb.pages')->with('success', 'Halaman "' . e($title) . '" berhasil dihapus.');
@@ -339,6 +404,16 @@ class AdminWebController extends Controller
     {
         $media = Media::findOrFail($id);
         $name = $media->file_name;
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'delete',
+            'deskripsi' => 'Menghapus file media: ' . $name,
+            'modul' => 'admin_web',
+            'referensi_id' => $media->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         $media->delete();
 
         return response()->json(['success' => true, 'message' => '"' . $name . '" berhasil dihapus.']);

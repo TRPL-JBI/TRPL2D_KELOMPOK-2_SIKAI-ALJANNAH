@@ -30,30 +30,36 @@
     </div>
 
     {{-- Filter Bar --}}
-    <div class="card" style="padding: 16px; margin-bottom: 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 240px; position: relative;">
-            <span class="material-icons" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 18px; pointer-events: none;">search</span>
-            <input type="text" name="search" placeholder="Cari nama atau email..." class="form-input" style="padding-left: 40px; width: 100%;" value="{{ request('search') }}">
+    <form method="GET" action="{{ route('superadmin.user') }}">
+        <div class="card" style="padding: 16px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 150px 150px auto; gap: 12px; align-items: center;">
+            <div style="position: relative;">
+                <span class="material-icons" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 18px; pointer-events: none;">search</span>
+                <input type="text" name="search" placeholder="Cari nama atau email..." class="form-input" style="padding-left: 40px; width: 100%;" value="{{ request('search') }}">
+            </div>
+            <select name="role" class="form-select" style="cursor: pointer;">
+                <option value="">Semua Role</option>
+                <option value="superadmin" {{ request('role') == 'superadmin' ? 'selected' : '' }}>Super Admin</option>
+                <option value="ketua" {{ request('role') == 'ketua' ? 'selected' : '' }}>Ketua</option>
+                <option value="sekretaris" {{ request('role') == 'sekretaris' ? 'selected' : '' }}>Sekretaris</option>
+                <option value="bendahara" {{ request('role') == 'bendahara' ? 'selected' : '' }}>Bendahara</option>
+                <option value="logistik" {{ request('role') == 'logistik' ? 'selected' : '' }}>Logistik</option>
+                <option value="adminweb" {{ request('role') == 'adminweb' ? 'selected' : '' }}>Admin Web</option>
+            </select>
+            <select name="status" class="form-select" style="cursor: pointer;">
+                <option value="">Semua Status</option>
+                <option value="aktif" {{ request('status') == 'aktif' ? 'selected' : '' }}>Aktif</option>
+                <option value="non_aktif" {{ request('status') == 'non_aktif' ? 'selected' : '' }}>Non-aktif</option>
+            </select>
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-sm btn-primary" style="display: inline-flex; align-items: center; gap: 4px;">
+                    <span class="material-icons" style="font-size: 14px;">search</span> Cari
+                </button>
+                <a href="{{ route('superadmin.user') }}" class="btn btn-sm btn-outline-primary" style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                    <span class="material-icons" style="font-size: 14px;">refresh</span> Reset
+                </a>
+            </div>
         </div>
-        <select class="form-select" style="min-width: 140px; cursor: pointer;">
-            <option value="">Semua Role</option>
-            <option value="superadmin">Super Admin</option>
-            <option value="ketua">Ketua</option>
-            <option value="sekretaris">Sekretaris</option>
-            <option value="bendahara">Bendahara</option>
-            <option value="logistik">Logistik</option>
-            <option value="adminweb">Admin Web</option>
-        </select>
-        <select class="form-select" style="min-width: 140px; cursor: pointer;">
-            <option value="">Semua Status</option>
-            <option value="aktif">Aktif</option>
-            <option value="non_aktif">Non-aktif</option>
-        </select>
-        <button class="btn btn-sm btn-outline-primary" style="display: inline-flex; align-items: center; gap: 4px;">
-            <span class="material-icons" style="font-size: 14px;">refresh</span> Reset
-        </button>
-        <span style="font-size: 12px; color: #6b7280; margin-left: auto;">{{ $users->total() }} hasil</span>
-    </div>
+    </form>
 
     {{-- User Table --}}
     <x-dashboard.data-table

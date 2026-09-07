@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\KwitansiService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use App\Models\LogSuperadmin;
 
 class WhatsAppController extends Controller
 {
@@ -70,6 +71,14 @@ class WhatsAppController extends Controller
 
         $result = $this->service->send($request->input('to'), $request->input('text'));
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Kirim WhatsApp ke: ' . $request->input('to'),
+            'modul' => 'whatsapp',
+            'ip_address' => request()->ip(),
+        ]);
+
         if (!empty($result['error'])) {
             return back()->with('error', $result['error']);
         }
@@ -107,6 +116,14 @@ class WhatsAppController extends Controller
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()]);
         }
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Kirim file uji WhatsApp ke: ' . $request->input('to'),
+            'modul' => 'whatsapp',
+            'ip_address' => request()->ip(),
+        ]);
 
         if (! empty($result['error'])) {
             return response()->json(['error' => $result['error']]);

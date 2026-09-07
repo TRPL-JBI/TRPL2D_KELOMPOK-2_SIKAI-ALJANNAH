@@ -10,6 +10,7 @@ use App\Models\AsetKendaraan;
 use App\Models\KategoriAset;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Models\LogSuperadmin;
 
 class LogistikController extends Controller
 {
@@ -76,6 +77,14 @@ class LogistikController extends Controller
 
         StokBarang::create($validated);
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Menambahkan barang baru: ' . $validated['nama_barang'] . ' (' . $validated['kode_barang'] . ')',
+            'modul' => 'logistik',
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->route('logistik.stok')->with('success', 'Barang berhasil ditambahkan.');
     }
 
@@ -97,12 +106,31 @@ class LogistikController extends Controller
 
         $barang->update($validated);
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'update',
+            'deskripsi' => 'Memperbarui barang: ' . $barang->nama_barang . ' (' . $barang->kode_barang . ')',
+            'modul' => 'logistik',
+            'referensi_id' => $barang->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->route('logistik.stok')->with('success', 'Barang berhasil diperbarui.');
     }
 
     public function destroyBarang($id)
     {
         $barang = StokBarang::findOrFail($id);
+        
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'delete',
+            'deskripsi' => 'Menghapus barang: ' . $barang->nama_barang . ' (' . $barang->kode_barang . ')',
+            'modul' => 'logistik',
+            'referensi_id' => $barang->id,
+            'ip_address' => request()->ip(),
+        ]);
+        
         $barang->delete();
 
         return redirect()->route('logistik.stok')->with('success', 'Barang berhasil dihapus.');
@@ -133,6 +161,15 @@ class LogistikController extends Controller
                 'jumlah' => $validated['jumlah'],
                 'keterangan' => $validated['keterangan'],
                 'user_id' => Auth::id(),
+            ]);
+
+            LogSuperadmin::create([
+                'user_id' => auth()->id(),
+                'aksi' => 'create',
+                'deskripsi' => 'Barang masuk: ' . $barang->nama_barang . ' +' . $validated['jumlah'] . ' ' . $barang->satuan,
+                'modul' => 'logistik',
+                'referensi_id' => $barang->id,
+                'ip_address' => request()->ip(),
             ]);
         });
 
@@ -172,6 +209,15 @@ class LogistikController extends Controller
                 'keterangan' => $validated['keterangan'],
                 'user_id' => Auth::id(),
             ]);
+
+            LogSuperadmin::create([
+                'user_id' => auth()->id(),
+                'aksi' => 'update',
+                'deskripsi' => 'Barang keluar: ' . $barang->nama_barang . ' -' . $validated['jumlah'] . ' ' . $barang->satuan,
+                'modul' => 'logistik',
+                'referensi_id' => $barang->id,
+                'ip_address' => request()->ip(),
+            ]);
         });
 
         return redirect()->route('logistik.stok')->with('success', 'Stok berhasil dikurangi.');
@@ -198,6 +244,14 @@ class LogistikController extends Controller
 
         AsetKendaraan::create($validated);
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Menambahkan aset baru: ' . $validated['nama_aset'] . ' (' . $validated['kode_aset'] . ')',
+            'modul' => 'logistik',
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->route('logistik.aset')->with('success', 'Aset berhasil ditambahkan.');
     }
 
@@ -215,12 +269,31 @@ class LogistikController extends Controller
 
         $aset->update($validated);
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'update',
+            'deskripsi' => 'Memperbarui aset: ' . $aset->nama_aset . ' (' . $aset->kode_aset . ')',
+            'modul' => 'logistik',
+            'referensi_id' => $aset->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->route('logistik.aset')->with('success', 'Aset berhasil diperbarui.');
     }
 
     public function destroyAset($id)
     {
         $aset = AsetKendaraan::findOrFail($id);
+        
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'delete',
+            'deskripsi' => 'Menghapus aset: ' . $aset->nama_aset . ' (' . $aset->kode_aset . ')',
+            'modul' => 'logistik',
+            'referensi_id' => $aset->id,
+            'ip_address' => request()->ip(),
+        ]);
+        
         $aset->delete();
 
         return redirect()->route('logistik.aset')->with('success', 'Aset berhasil dihapus.');
@@ -261,6 +334,15 @@ class LogistikController extends Controller
             'jumlah' => 1,
             'keterangan' => $labelStatus[$oldStatus] . ' → ' . $labelStatus[$newStatus],
             'user_id' => Auth::id(),
+        ]);
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'update',
+            'deskripsi' => 'Update status aset: ' . $aset->nama_aset . ' dari ' . $labelStatus[$oldStatus] . ' ke ' . $labelStatus[$newStatus],
+            'modul' => 'logistik',
+            'referensi_id' => $aset->id,
+            'ip_address' => request()->ip(),
         ]);
 
         return redirect()->route('logistik.aset')->with('success', 'Status aset berhasil diperbarui.');

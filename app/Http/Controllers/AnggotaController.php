@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Anggota;
 use Illuminate\Http\Request;
+use App\Models\LogSuperadmin;
 
 class AnggotaController extends Controller
 {
@@ -34,6 +35,15 @@ class AnggotaController extends Controller
         }
 
         session(['anggota_id' => $anggota->id]);
+
+        LogSuperadmin::create([
+            'user_id' => null,
+            'aksi' => 'login',
+            'deskripsi' => 'Anggota login: ' . $anggota->nama . ' (kode akses)',
+            'modul' => 'anggota',
+            'referensi_id' => $anggota->id,
+            'ip_address' => request()->ip(),
+        ]);
 
         return redirect()->route('anggota.dashboard');
     }

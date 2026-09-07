@@ -32,7 +32,7 @@
         <div>
             <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-400);">Storage Management</span>
             <h1 style="font-size: 28px; font-weight: 800; color: var(--primary-500); margin: 4px 0 0 0;">Daftar File Storage</h1>
-            <p style="font-size: 14px; color: #6b7280; margin-top: 6px;">Kelola dan unduh file yang tersimpan di sistem</p>
+            <p style="font-size: 14px; color: var(--primary-500); margin-top: 6px;">Kelola dan unduh file yang tersimpan di sistem</p>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
             <a href="/superadmin/file/trash" style="display: inline-flex; align-items: center; gap: 6px; background: #fef2f2; color: #dc2626; padding: 8px 20px; border-radius: 100px; font-size: 13px; font-weight: 700; text-decoration: none; transition: all .2s;">
@@ -46,100 +46,91 @@
     </div>
 
     {{-- Storage Overview Stats --}}
+    @php
+        $totalSizeFormatted = $totalSize >= 1073741824
+            ? number_format($totalSize / 1073741824, 2) . ' GB'
+            : ($totalSize >= 1048576 ? number_format($totalSize / 1048576, 2) . ' MB' : number_format($totalSize / 1024, 1) . ' KB');
+    @endphp
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
         <div class="card" style="padding: 16px;">
-            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 4px;">TOTAL UKURAN</div>
-            <div style="font-size: 20px; font-weight: 800; color: var(--primary-500);">-</div>
+            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-500); margin-bottom: 4px;">TOTAL UKURAN</div>
+            <div style="font-size: 20px; font-weight: 800; color: var(--primary-500);">{{ $totalSizeFormatted }}</div>
         </div>
         <div class="card" style="padding: 16px;">
-            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 4px;">KUOTA TERPAKAI</div>
-            <div style="font-size: 20px; font-weight: 800; color: var(--primary-500);">-</div>
+            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-500); margin-bottom: 4px;">KUOTA TERPAKAI</div>
+            <div style="font-size: 20px; font-weight: 800; color: var(--primary-500);">{{ $totalSizeFormatted }}</div>
         </div>
         <div class="card" style="padding: 16px;">
-            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 4px;">TOTAL FILE</div>
-            <div style="font-size: 20px; font-weight: 800; color: var(--primary-500);">{{ $files->total() }}</div>
+            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-500); margin-bottom: 4px;">TOTAL FILE</div>
+            <div style="font-size: 20px; font-weight: 800; color: var(--primary-500);">{{ $totalFiles }}</div>
         </div>
         <div class="card" style="padding: 16px;">
-            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 4px;">UNDUHAN BULAN INI</div>
+            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-500); margin-bottom: 4px;">UNDUHAN BULAN INI</div>
             <div style="font-size: 20px; font-weight: 800; color: var(--primary-500);">-</div>
         </div>
     </div>
 
     {{-- Filter Bar --}}
-    <div class="card" style="padding: 16px; margin-bottom: 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 240px; position: relative;">
-            <span class="material-icons" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 18px; pointer-events: none;">search</span>
-            <input type="text" name="search" placeholder="Cari nama file..." class="form-input" style="padding-left: 40px; width: 100%;" value="{{ request('search') }}">
+    <form method="GET" action="{{ route('superadmin.file') }}">
+        <div class="card" style="padding: 16px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 150px 150px auto; gap: 12px; align-items: center;">
+            <div style="position: relative;">
+                <span class="material-icons" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 18px; pointer-events: none;">search</span>
+                <input type="text" name="search" placeholder="Cari nama file..." class="form-input" style="padding-left: 40px; width: 100%;" value="{{ request('search') }}">
+            </div>
+            <select name="type" class="form-select" style="cursor: pointer;">
+                <option value="">Semua Tipe</option>
+                <option value="pdf" {{ request('type') == 'pdf' ? 'selected' : '' }}>PDF</option>
+                <option value="doc" {{ request('type') == 'doc' ? 'selected' : '' }}>Dokumen</option>
+                <option value="xls" {{ request('type') == 'xls' ? 'selected' : '' }}>Spreadsheet</option>
+                <option value="img" {{ request('type') == 'img' ? 'selected' : '' }}>Gambar</option>
+                <option value="vid" {{ request('type') == 'vid' ? 'selected' : '' }}>Video</option>
+                <option value="zip" {{ request('type') == 'zip' ? 'selected' : '' }}>Arsip</option>
+                <option value="lainnya" {{ request('type') == 'lainnya' ? 'selected' : '' }}>Lainnya</option>
+            </select>
+            <select name="sort" class="form-select" style="cursor: pointer;">
+                <option value="date-desc" {{ request('sort') == 'date-desc' ? 'selected' : '' }}>Terbaru</option>
+                <option value="date-asc" {{ request('sort') == 'date-asc' ? 'selected' : '' }}>Terlama</option>
+                <option value="size-desc" {{ request('sort') == 'size-desc' ? 'selected' : '' }}>Ukuran (Besar)</option>
+                <option value="size-asc" {{ request('sort') == 'size-asc' ? 'selected' : '' }}>Ukuran (Kecil)</option>
+                <option value="name-asc" {{ request('sort') == 'name-asc' ? 'selected' : '' }}>Nama (A-Z)</option>
+            </select>
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-sm btn-primary" style="display: inline-flex; align-items: center; gap: 4px;">
+                    <span class="material-icons" style="font-size: 14px;">search</span> Cari
+                </button>
+                <a href="{{ route('superadmin.file') }}" class="btn btn-sm btn-outline-primary" style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                    <span class="material-icons" style="font-size: 14px;">refresh</span> Reset
+                </a>
+            </div>
         </div>
-        <select class="form-select" style="min-width: 140px; cursor: pointer;">
-            <option value="">Semua Tipe</option>
-            <option value="pdf">PDF</option>
-            <option value="doc">Dokumen</option>
-            <option value="xls">Spreadsheet</option>
-            <option value="img">Gambar</option>
-            <option value="vid">Video</option>
-            <option value="zip">Arsip</option>
-        </select>
-        <select class="form-select" style="min-width: 160px; cursor: pointer;">
-            <option value="date-desc">Terbaru</option>
-            <option value="date-asc">Terlama</option>
-            <option value="size-desc">Ukuran (Besar)</option>
-            <option value="size-asc">Ukuran (Kecil)</option>
-            <option value="name-asc">Nama (A-Z)</option>
-        </select>
-        <span style="font-size: 12px; color: #6b7280; margin-left: auto;">{{ $files->total() }} hasil</span>
-    </div>
-
-    {{-- Category Filter Buttons --}}
-    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
-        <a href="{{ route('superadmin.file') }}" class="btn btn-sm {{ !request('kategori') ? 'btn-primary' : 'btn-outline-primary' }}">
-            Semua
-        </a>
-        @foreach(config('file-pemilah.labels') as $key => $label)
-            <a href="{{ route('superadmin.file', ['kategori' => $key]) }}"
-               class="btn btn-sm {{ request('kategori') === $key ? 'btn-primary' : 'btn-outline-primary' }}">
-                {{ $label }}
-            </a>
-        @endforeach
-        <a href="{{ route('superadmin.file', ['kategori' => 'media']) }}"
-           class="btn btn-sm {{ request('kategori') === 'media' ? 'btn-primary' : 'btn-outline-primary' }}">
-            Media Lain
-        </a>
-    </div>
+    </form>
 
     {{-- File Table --}}
     <x-dashboard.data-table
         title="Daftar File"
-        :headers="['Nomor', 'Nama File', 'Sumber', 'Kategori', 'Ukuran', 'Tipe', 'Status', 'Diupload Oleh', 'Aksi']"
+        :headers="['Nomor', 'Nama File', 'Tipe', 'Ukuran', 'Terakhir Diubah', 'Aksi']"
         :paginator="$files"
-        search-placeholder="Cari file..."
+        :searchable="false"
     >
         @forelse($files as $index => $file)
             @php
                 $sizeFormatted = $file->size >= 1048576
                     ? number_format($file->size / 1048576, 2) . ' MB'
                     : ($file->size >= 1024 ? number_format($file->size / 1024, 1) . ' KB' : $file->size . ' B');
-                $extension = pathinfo($file->nama_file, PATHINFO_EXTENSION);
+                $typeLabels = ['pdf' => 'PDF', 'doc' => 'Dokumen', 'xls' => 'Spreadsheet', 'img' => 'Gambar', 'vid' => 'Video', 'zip' => 'Arsip', 'lainnya' => 'Lainnya'];
+                $typeBadge = ['pdf' => 'badge-danger', 'doc' => 'badge-info', 'xls' => 'badge-success', 'img' => 'badge-warning', 'vid' => 'badge-info', 'zip' => 'badge-info', 'lainnya' => 'badge-info'];
             @endphp
             <tr>
                 <td>{{ $files->firstItem() + $index }}</td>
-                <td>{{ $file->nama_file }}</td>
-                <td><span style="font-size:12px;color:#6b7280;">{{ $file->source_label }}</span></td>
+                <td style="font-weight: 600; color: #1f2937;">{{ $file->nama_file }}</td>
                 <td>
-                    <span class="badge {{ $file->kategori_badge }}">{{ $file->kategori_label }}</span>
+                    <span class="badge {{ $typeBadge[$file->kategori] ?? 'badge-info' }}">{{ $typeLabels[$file->kategori] ?? ucfirst($file->kategori) }}</span>
                 </td>
-                <td style="white-space:nowrap;">{{ $sizeFormatted }}</td>
-                <td style="font-size:12px;color:#6b7280;max-width:180px;word-break:break-all;">{{ $file->mime_type }}</td>
-                <td>
-                    <span class="badge {{ $file->status_badge }}">{{ $file->status_label }}</span>
-                </td>
-                <td>{{ $file->uploader_nama }}</td>
+                <td style="white-space: nowrap;">{{ $sizeFormatted }}</td>
+                <td style="color: var(--primary-500);">{{ $file->created_at->format('d/m/Y H:i') }}</td>
                 <td>
                     <div style="display: flex; gap: 6px;">
-                        <a href="{{ $file->download_url }}" class="btn btn-sm btn-outline-primary" title="Download">
-                            <span class="material-icons" style="font-size: 16px;">download</span>
-                        </a>
-                        <button class="btn btn-sm btn-outline-primary" onclick="openFileInfoModal('{{ escapeJs($file->nama_file) }}', '{{ escapeJs($file->kategori_label) }}', '{{ escapeJs($file->status_label) }}', '{{ escapeJs($file->uploader_nama) }}', '{{ $file->created_at?->format('d/m/Y H:i') ?? '-' }}', '{{ $sizeFormatted }}', '{{ escapeJs($file->mime_type) }}', '{{ escapeJs($extension) }}', '{{ $file->media_id ?? '' }}', '{{ escapeJs($file->source_label) }}')" title="Info File">
+                        <button class="btn btn-sm btn-outline-primary" onclick="openFileInfoModal('{{ escapeJs($file->nama_file) }}', '{{ escapeJs($typeLabels[$file->kategori] ?? $file->kategori) }}', '{{ $sizeFormatted }}', '{{ escapeJs($file->mime_type) }}', '{{ escapeJs($file->extension) }}', '{{ $file->created_at->format('d/m/Y H:i') }}', '{{ escapeJs($file->file_path) }}')" title="Info File">
                             <span class="material-icons" style="font-size: 16px;">info</span>
                         </button>
                     </div>
@@ -147,7 +138,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="9" style="text-align: center; color: var(--secondary-600); padding: 40px 16px;">
+                <td colspan="6" style="text-align: center; color: var(--primary-500); padding: 40px 16px;">
                     Tidak ada file ditemukan.
                 </td>
             </tr>
@@ -165,7 +156,6 @@
                 <table style="width:100%;border-collapse:collapse;">
                     <tbody id="fileInfoBody"></tbody>
                 </table>
-                <div id="filePreviewContainer" style="padding:16px;text-align:center;border-top:1px solid #e5e7eb;display:none;"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-primary" onclick="closeFileInfoModal()" style="font-weight:600;">Tutup</button>
@@ -186,21 +176,6 @@
                     <div class="form-group">
                         <label for="file" class="form-label">Pilih File</label>
                         <input type="file" id="file" name="file" class="form-input" required style="padding: 10px;">
-                    </div>
-                    <div style="background-color: #f7f9fc; border-radius: 8px; padding: 12px 16px; margin-top: 16px; font-size: 0.85rem; color: #4a5568;">
-                        <strong style="display: block; margin-bottom: 8px; color: #16423c;">Informasi Pemilahan:</strong>
-                        <p style="margin: 4px 0;">
-                            <span class="badge badge-success" style="font-size: 11px;">Diterima</span>
-                            Dokumen, gambar, dan file teks aman.
-                        </p>
-                        <p style="margin: 4px 0;">
-                            <span class="badge badge-warning" style="font-size: 11px;">Mencurigakan</span>
-                            Executable, script, dan arsip.
-                        </p>
-                        <p style="margin: 4px 0;">
-                            <span class="badge badge-danger" style="font-size: 11px;">Ditolak</span>
-                            Script web, SQL, dan file sistem.
-                        </p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -226,18 +201,15 @@
             if (e.target === this) closeUploadModal();
         });
 
-        function openFileInfoModal(nama, kategori, status, uploader, tanggal, ukuran, mime, ext, mediaId, sumber) {
+        function openFileInfoModal(nama, tipe, ukuran, mime, ext, tanggal, path) {
             var rows = [
                 { label: 'Nama File', value: nama },
-                { label: 'Sumber', value: sumber },
+                { label: 'Tipe', value: tipe },
                 { label: 'Ekstensi', value: ext || '-' },
                 { label: 'Ukuran', value: ukuran },
                 { label: 'Tipe MIME', value: mime },
-                { label: 'Kategori', value: kategori },
-                { label: 'Status', value: status },
-                { label: 'Diupload Oleh', value: uploader },
-                { label: 'Tanggal Upload', value: tanggal },
-                { label: 'Media ID', value: mediaId || '-' },
+                { label: 'Tanggal Diubah', value: tanggal },
+                { label: 'Lokasi', value: path },
             ];
 
             var html = '';
@@ -245,20 +217,11 @@
                 var bg = i % 2 === 0 ? '#f9fafb' : '#ffffff';
                 html += '<tr style="background:' + bg + ';">';
                 html += '<td style="padding:10px 16px;font-size:12px;font-weight:600;color:#374151;white-space:nowrap;border-bottom:1px solid #e5e7eb;width:140px;">' + rows[i].label + '</td>';
-                html += '<td style="padding:10px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;word-break:break-all;">' + rows[i].value + '</td>';
+                html += '<td style="padding:10px 16px;font-size:13px;color:var(--primary-500);border-bottom:1px solid #e5e7eb;word-break:break-all;">' + rows[i].value + '</td>';
                 html += '</tr>';
             }
 
             document.getElementById('fileInfoBody').innerHTML = html;
-
-            var preview = document.getElementById('filePreviewContainer');
-            if (mime.startsWith('image/') && mediaId) {
-                preview.innerHTML = '<img src="/spatie-media/' + mediaId + '" style="max-width:100%;max-height:300px;border-radius:8px;border:1px solid #e5e7eb;">';
-                preview.style.display = 'block';
-            } else {
-                preview.style.display = 'none';
-            }
-
             document.getElementById('fileInfoModal').classList.add('active');
         }
 

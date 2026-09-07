@@ -13,6 +13,7 @@ use App\Models\KategoriPengeluaran;
 use App\Models\PermintaanIzin;
 use App\Services\KwitansiService;
 use App\Services\WhatsAppService;
+use App\Models\LogSuperadmin;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use OpenSpout\Common\Entity\Row;
@@ -651,6 +652,15 @@ class BendaharaController extends Controller
 
         $pemasukan->addMedia($request->file('file_bukti'))->withCustomProperties(['uploaded_by' => auth()->id()])->toMediaCollection('bukti');
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Menambahkan pemasukan: Rp ' . number_format($pemasukan->jumlah, 0, ',', '.') . ' (' . ($pemasukan->kategoriPemasukan?->nama ?? '-') . ')',
+            'modul' => 'bendahara',
+            'referensi_id' => $pemasukan->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -682,6 +692,15 @@ class BendaharaController extends Controller
         ]);
 
         $pengeluaran->addMedia($request->file('file_bukti'))->withCustomProperties(['uploaded_by' => auth()->id()])->toMediaCollection('bukti');
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Menambahkan pengeluaran: Rp ' . number_format($pengeluaran->jumlah, 0, ',', '.') . ' (' . ($pengeluaran->kategoriPengeluaran?->nama ?? '-') . ')',
+            'modul' => 'bendahara',
+            'referensi_id' => $pengeluaran->id,
+            'ip_address' => request()->ip(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -826,6 +845,15 @@ class BendaharaController extends Controller
             ]);
         }
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Mencatat iuran anggota: ' . $anggota->nama . ' - ' . $validated['jumlah_bulan'] . ' bulan - Rp ' . number_format($totalNominal, 0, ',', '.'),
+            'modul' => 'bendahara',
+            'referensi_id' => $pemasukan->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         $waStatus = 'tidak_aktif';
         if ($anggota->telepon && $this->wa()->isReady()) {
             $waStatus = $this->kirimKwitansiIuranKe(
@@ -914,6 +942,14 @@ class BendaharaController extends Controller
             }
         }
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Mengirim tagihan iuran via WhatsApp: ' . $terkirim . ' terkirim, ' . $gagal . ' gagal, ' . $tanpaNomor . ' tanpa nomor, ' . $lunas . ' sudah lunas',
+            'modul' => 'bendahara',
+            'ip_address' => request()->ip(),
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Tagihan terkirim ke ' . $terkirim . ' anggota'
@@ -974,15 +1010,20 @@ class BendaharaController extends Controller
             (int) $iuran->pemasukan_id,
         );
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Mengirim kwitansi iuran via WhatsApp ke: ' . $anggota->nama,
+            'modul' => 'bendahara',
+            'referensi_id' => $iuran->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         return response()->json([
             'success' => true,
             'wa' => $waStatus,
         ]);
     }
-
-    // ---------------------------------------------------------------
-    //  Laporan
-    // ---------------------------------------------------------------
 
     public function laporan()
     {
@@ -1504,6 +1545,15 @@ class BendaharaController extends Controller
             'new_value' => $validated['new_value'],
             'alasan' => $validated['alasan'],
             'status' => 'menunggu',
+        ]);
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Mengirim permintaan izin edit: ' . $validated['target_table'] . ' #' . $validated['target_id'] . ' - ' . $validated['field_name'],
+            'modul' => 'bendahara',
+            'referensi_id' => $permintaan->id,
+            'ip_address' => request()->ip(),
         ]);
 
         return response()->json([

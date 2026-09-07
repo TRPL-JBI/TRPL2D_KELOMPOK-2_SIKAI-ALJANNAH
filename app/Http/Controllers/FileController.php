@@ -7,6 +7,7 @@ use App\Models\Media;
 use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 use Symfony\Component\HttpFoundation\Response;
+use App\Models\LogSuperadmin;
 
 class FileController extends Controller
 {
@@ -25,6 +26,15 @@ class FileController extends Controller
             if (! file_exists($fullPath)) {
                 abort(404);
             }
+
+            LogSuperadmin::create([
+                'user_id' => auth()->id(),
+                'aksi' => 'download',
+                'deskripsi' => 'Download file: ' . $spatieMedia->file_name,
+                'modul' => 'file',
+                'referensi_id' => $file->id,
+                'ip_address' => request()->ip(),
+            ]);
 
             return $this->serve($fullPath, $spatieMedia->file_name);
         }
@@ -48,6 +58,15 @@ class FileController extends Controller
 
         $fullPath = $diskDriver->path($file->file_path);
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'download',
+            'deskripsi' => 'Download file: ' . $file->nama_file,
+            'modul' => 'file',
+            'referensi_id' => $file->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         return $this->serve($fullPath, $file->nama_file);
     }
 
@@ -60,6 +79,15 @@ class FileController extends Controller
             if (! file_exists($fullPath)) {
                 abort(404);
             }
+
+            LogSuperadmin::create([
+                'user_id' => auth()->id(),
+                'aksi' => 'download',
+                'deskripsi' => 'Download media: ' . $spatieMedia->file_name,
+                'modul' => 'file',
+                'referensi_id' => $spatieMedia->id,
+                'ip_address' => request()->ip(),
+            ]);
 
             return $this->serve($fullPath, $spatieMedia->file_name);
         }
@@ -77,6 +105,15 @@ class FileController extends Controller
         }
 
         $fullPath = $diskDriver->path($media->file_path);
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'download',
+            'deskripsi' => 'Download media: ' . $media->file_name,
+            'modul' => 'file',
+            'referensi_id' => $media->id,
+            'ip_address' => request()->ip(),
+        ]);
 
         return $this->serve($fullPath, $media->file_name);
     }
