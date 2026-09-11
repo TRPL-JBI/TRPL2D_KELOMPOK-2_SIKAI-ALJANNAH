@@ -247,9 +247,9 @@
                                         @if($calon->status === 'sudah_membayar')
                                             <form method="POST" action="{{ route('sekretaris.verifikasi', $calon->id) }}" style="display: inline;">
                                                 @csrf
-                                                <button type="submit" class="btn btn-success btn-sm">
+                                                <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Verifikasi dan kirim pesan WhatsApp ke {{ $calon->nama }}?');">
                                                     <span class="material-icons">check_circle</span>
-                                                    Verifikasi
+                                                    Verifikasi & Kirim WA
                                                 </button>
                                             </form>
                                         @else
@@ -711,6 +711,15 @@
 
         .btn-sm .material-icons {
             font-size: 16px;
+        }
+
+        .btn-whatsapp {
+            background-color: #25d366;
+            color: #ffffff;
+        }
+
+        .btn-whatsapp:hover {
+            background-color: #1ebe5d;
         }
 
         .empty-state {

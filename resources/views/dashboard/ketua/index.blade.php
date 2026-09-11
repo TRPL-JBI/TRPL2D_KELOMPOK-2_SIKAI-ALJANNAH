@@ -209,7 +209,7 @@ body { background-color: #eef6f2; }
 <div class="ketua-two-col">
     <div class="ketua-card"><div class="ketua-card-title">Arus Keuangan</div><div class="ketua-chart-container"><canvas id="financeChart"></canvas></div><div class="ketua-chart-footer">Data Keuangan Tahun 2026</div></div>
     <div class="ketua-card"><div class="ketua-card-title">Aktivitas Terbaru</div><div class="ketua-activities-list">@forelse($activities as $a)
-        <div class="ketua-activity-item"><div class="ketua-activity-icon green"><span class="material-symbols-outlined">assignment</span></div><div class="ketua-activity-text"><div class="ketua-activity-desc">{{ $a->deskripsi }} - {{ $a->user?->nama ?? 'Sistem' }}</div><div class="ketua-activity-time">{{ $a->created_at->format('d M Y H:i') }}</div></div></div>
+        <div class="ketua-activity-item"><div class="ketua-activity-icon green"><span class="material-symbols-outlined">assignment</span></div><div class="ketua-activity-text"><div class="ketua-activity-desc">{{ $a->deskripsi }} - {{ $a->user_nama }}</div><div class="ketua-activity-time">{{ $a->created_at->format('d M Y H:i') }}</div></div></div>
     @empty
         <div style="text-align:center;padding:20px;color:#9ca3af;font-size:13px;">Belum ada aktivitas</div>
     @endforelse</div></div>
