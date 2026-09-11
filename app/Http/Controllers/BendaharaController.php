@@ -487,9 +487,50 @@ class BendaharaController extends Controller
     //  Catat Transaksi
     // ---------------------------------------------------------------
 
-    public function catatTransaksi()
+    public function catatTransaksi(Request $request)
     {
-        $pemasukan = Pemasukan::with('kategoriPemasukan')->get()->map(fn($p) => [
+        $tanggalMulai = $request->input('tanggal_mulai');
+        $tanggalSampai = $request->input('tanggal_sampai');
+        $tipe = $request->input('tipe');
+        $kategori = $request->input('kategori');
+        $keterangan = $request->input('keterangan');
+        $nominalMin = $request->input('nominal_min');
+        $nominalMax = $request->input('nominal_max');
+
+        $queryPemasukan = Pemasukan::with('kategoriPemasukan');
+        $queryPengeluaran = Pengeluaran::with('kategoriPengeluaran');
+
+        if ($tipe !== 'pengeluaran') {
+            $queryPemasukan->when($tanggalMulai, fn($q, $v) => $q->whereDate('tanggal', '>=', $v))
+                ->when($tanggalSampai, fn($q, $v) => $q->whereDate('tanggal', '<=', $v))
+                ->when($keterangan, fn($q, $v) => $q->where('keterangan', 'like', '%' . $v . '%'))
+                ->when($nominalMin, fn($q, $v) => $q->where('jumlah', '>=', $v))
+                ->when($nominalMax, fn($q, $v) => $q->where('jumlah', '<=', $v));
+
+            if ($kategori) {
+                $kategoriParts = explode('_', $kategori);
+                if (isset($kategoriParts[1]) && $kategoriParts[0] === 'pemasukan') {
+                    $queryPemasukan->where('kategori_pemasukan_id', $kategoriParts[1]);
+                }
+            }
+        }
+
+        if ($tipe !== 'pemasukan') {
+            $queryPengeluaran->when($tanggalMulai, fn($q, $v) => $q->whereDate('tanggal', '>=', $v))
+                ->when($tanggalSampai, fn($q, $v) => $q->whereDate('tanggal', '<=', $v))
+                ->when($keterangan, fn($q, $v) => $q->where('keterangan', 'like', '%' . $v . '%'))
+                ->when($nominalMin, fn($q, $v) => $q->where('jumlah', '>=', $v))
+                ->when($nominalMax, fn($q, $v) => $q->where('jumlah', '<=', $v));
+
+            if ($kategori) {
+                $kategoriParts = explode('_', $kategori);
+                if (isset($kategoriParts[1]) && $kategoriParts[0] === 'pengeluaran') {
+                    $queryPengeluaran->where('kategori_pengeluaran_id', $kategoriParts[1]);
+                }
+            }
+        }
+
+        $pemasukanData = $tipe !== 'pengeluaran' ? $queryPemasukan->get()->map(fn($p) => [
             'id' => $p->id,
             'tipe' => 'Pemasukan',
             'tanggal' => $p->created_at->format('d/m/Y'),
@@ -498,9 +539,9 @@ class BendaharaController extends Controller
             'keterangan' => $p->keterangan ?? '-',
             'created_at' => $p->created_at,
             'file_url' => $p->getFirstMediaUrl('bukti') ?: null,
-        ]);
+        ]) : collect();
 
-        $pengeluaran = Pengeluaran::with('kategoriPengeluaran')->get()->map(fn($p) => [
+        $pengeluaranData = $tipe !== 'pemasukan' ? $queryPengeluaran->get()->map(fn($p) => [
             'id' => $p->id,
             'tipe' => 'Pengeluaran',
             'tanggal' => $p->created_at->format('d/m/Y'),
@@ -509,24 +550,35 @@ class BendaharaController extends Controller
             'keterangan' => $p->keterangan ?? '-',
             'created_at' => $p->created_at,
             'file_url' => $p->getFirstMediaUrl('bukti') ?: null,
-        ]);
+        ]) : collect();
 
-        $all = $pemasukan->concat($pengeluaran)->sortByDesc('created_at')->values();
+        $all = $pemasukanData->concat($pengeluaranData)->sortByDesc('created_at')->values();
 
-        $page = request()->get('page', 1);
+        $page = $request->get('page', 1);
         $perPage = 20;
         $transaksi = new LengthAwarePaginator(
             $all->forPage($page, $perPage),
             $all->count(),
             $perPage,
             $page,
-            ['path' => request()->url(), 'query' => request()->query()]
+            ['path' => $request->url(), 'query' => $request->query()]
         );
 
         $kategoriPemasukan = KategoriPemasukan::all();
         $kategoriPengeluaran = KategoriPengeluaran::all();
 
-        return view('dashboard.bendahara.catat-transaksi', compact('transaksi', 'kategoriPemasukan', 'kategoriPengeluaran') + ['waReady' => $this->wa()->isReady()]);
+        return view('dashboard.bendahara.catat-transaksi', compact('transaksi', 'kategoriPemasukan', 'kategoriPengeluaran') + [
+            'waReady' => $this->wa()->isReady(),
+            'filter' => [
+                'tanggal_mulai' => $tanggalMulai,
+                'tanggal_sampai' => $tanggalSampai,
+                'tipe' => $tipe,
+                'kategori' => $kategori,
+                'keterangan' => $keterangan,
+                'nominal_min' => $nominalMin,
+                'nominal_max' => $nominalMax,
+            ],
+        ]);
     }
 
     public function storeTransaksi(Request $request)

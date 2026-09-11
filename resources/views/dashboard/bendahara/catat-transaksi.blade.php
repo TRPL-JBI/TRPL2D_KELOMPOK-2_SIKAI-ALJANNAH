@@ -69,7 +69,58 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endif
 
-<div class="table-card" style="margin-top:24px;">
+<div class="filter-card" style="background:#fff;border-radius:20px;border:2px solid var(--primary-500);box-shadow:0 4px 16px rgba(0,0,0,.05);padding:20px 24px;margin-top:24px;">
+    <form id="filterForm" method="GET" action="{{ route('bendahara.catat-transaksi') }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-400);margin-bottom:6px;">Tanggal Mulai</label>
+                <input type="date" name="tanggal_mulai" id="filterTanggalMulai" value="{{ $filter['tanggal_mulai'] ?? '' }}" style="width:100%;padding:10px 14px;border:2px solid var(--primary-200);border-radius:12px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;color:#1f2937;">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-400);margin-bottom:6px;">Tanggal Sampai</label>
+                <input type="date" name="tanggal_sampai" id="filterTanggalSampai" value="{{ $filter['tanggal_sampai'] ?? '' }}" style="width:100%;padding:10px 14px;border:2px solid var(--primary-200);border-radius:12px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;color:#1f2937;">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-400);margin-bottom:6px;">Tipe Transaksi</label>
+                <select name="tipe" id="filterTipe" onchange="toggleFilterKategori(this.value)" style="width:100%;padding:10px 14px;border:2px solid var(--primary-200);border-radius:12px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;appearance:auto;color:#1f2937;">
+                    <option value="">Semua</option>
+                    <option value="pemasukan" {{ ($filter['tipe'] ?? '') === 'pemasukan' ? 'selected' : '' }}>Pemasukan</option>
+                    <option value="pengeluaran" {{ ($filter['tipe'] ?? '') === 'pengeluaran' ? 'selected' : '' }}>Pengeluaran</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-400);margin-bottom:6px;">Kategori</label>
+                <select name="kategori" id="filterKategori" style="width:100%;padding:10px 14px;border:2px solid var(--primary-200);border-radius:12px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;appearance:auto;color:#1f2937;">
+                    <option value="">Semua Kategori</option>
+                </select>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:12px;align-items:end;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-400);margin-bottom:6px;">Cari Keterangan</label>
+                <input type="text" name="keterangan" id="filterKeterangan" value="{{ $filter['keterangan'] ?? '' }}" placeholder="Masukkan keterangan..." style="width:100%;padding:10px 14px;border:2px solid var(--primary-200);border-radius:12px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;color:#1f2937;">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-400);margin-bottom:6px;">Nominal Minimum</label>
+                <input type="number" name="nominal_min" id="filterNominalMin" value="{{ $filter['nominal_min'] ?? '' }}" placeholder="0" min="0" style="width:100%;padding:10px 14px;border:2px solid var(--primary-200);border-radius:12px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;color:#1f2937;">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-400);margin-bottom:6px;">Nominal Maksimum</label>
+                <input type="number" name="nominal_max" id="filterNominalMax" value="{{ $filter['nominal_max'] ?? '' }}" placeholder="∞" min="0" style="width:100%;padding:10px 14px;border:2px solid var(--primary-200);border-radius:12px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;color:#1f2937;">
+            </div>
+            <button type="submit" class="btn-primary" style="padding:10px 24px;font-size:13px;border-radius:12px;white-space:nowrap;">
+                <span class="material-icons" style="font-size:16px;">filter_list</span>
+                Filter
+            </button>
+            <a href="{{ route('bendahara.catat-transaksi') }}" class="btn-secondary" style="padding:10px 24px;font-size:13px;border-radius:12px;white-space:nowrap;text-decoration:none;">
+                <span class="material-icons" style="font-size:16px;">restart_alt</span>
+                Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="table-card" style="margin-top:16px;">
     <div class="table-wrap">
         <table>
             <thead>
@@ -119,6 +170,58 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <script>
+    function toggleFilterKategori(tipe) {
+        var sel = document.getElementById('filterKategori');
+        var currentVal = '{{ $filter["kategori"] ?? "" }}';
+        var html = '<option value="">Semua Kategori</option>';
+        var kPemasukan = window._kategoriPemasukan || [];
+        var kPengeluaran = window._kategoriPengeluaran || [];
+        if (tipe === 'pemasukan') {
+            for (var i = 0; i < kPemasukan.length; i++) {
+                var val = 'pemasukan_' + kPemasukan[i].id;
+                html += '<option value="' + val + '"' + (val === currentVal ? ' selected' : '') + '>' + kPemasukan[i].nama + '</option>';
+            }
+        } else if (tipe === 'pengeluaran') {
+            for (var i = 0; i < kPengeluaran.length; i++) {
+                var val = 'pengeluaran_' + kPengeluaran[i].id;
+                html += '<option value="' + val + '"' + (val === currentVal ? ' selected' : '') + '>' + kPengeluaran[i].nama + '</option>';
+            }
+        } else {
+            for (var i = 0; i < kPemasukan.length; i++) {
+                var val = 'pemasukan_' + kPemasukan[i].id;
+                html += '<option value="' + val + '"' + (val === currentVal ? ' selected' : '') + '>' + kPemasukan[i].nama + '</option>';
+            }
+            for (var i = 0; i < kPengeluaran.length; i++) {
+                var val = 'pengeluaran_' + kPengeluaran[i].id;
+                html += '<option value="' + val + '"' + (val === currentVal ? ' selected' : '') + '>' + kPengeluaran[i].nama + '</option>';
+            }
+        }
+        sel.innerHTML = html;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var tipe = document.getElementById('filterTipe').value;
+        toggleFilterKategori(tipe);
+    });
+
+    document.getElementById('filterForm').addEventListener('submit', function(e) {
+        var tglMulai = document.getElementById('filterTanggalMulai').value;
+        var tglSampai = document.getElementById('filterTanggalSampai').value;
+        var nomMin = document.getElementById('filterNominalMin').value;
+        var nomMax = document.getElementById('filterNominalMax').value;
+
+        if (tglMulai && tglSampai && tglMulai > tglSampai) {
+            e.preventDefault();
+            alert('Tanggal mulai tidak boleh lebih besar dari tanggal sampai.');
+            return false;
+        }
+        if (nomMin && nomMax && parseFloat(nomMin) > parseFloat(nomMax)) {
+            e.preventDefault();
+            alert('Nominal minimum tidak boleh lebih besar dari nominal maksimum.');
+            return false;
+        }
+    });
+
     function openModalTransaksi() {
         enableBtn();
         document.getElementById('modalTransaksi').classList.add('active');
