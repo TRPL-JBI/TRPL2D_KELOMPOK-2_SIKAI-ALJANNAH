@@ -12,12 +12,20 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use App\Services\WhatsAppService;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Reader\XLSX\Reader;
 use OpenSpout\Writer\XLSX\Writer;
 
 class SekretarisController extends Controller
 {
+    protected WhatsAppService $whatsapp;
+
+    public function __construct(WhatsAppService $whatsapp)
+    {
+        $this->whatsapp = $whatsapp;
+    }
+
     public function index()
     {
         $calonAnggota = CalonAnggota::whereIn('status', ['menunggu_verifikasi', 'sudah_membayar'])
@@ -61,6 +69,11 @@ class SekretarisController extends Controller
         $lastId = Anggota::max('id') ?? 0;
         $nomorAnggota = 'RKM-'.str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
 
+        while (Anggota::where('nomor_anggota', $nomorAnggota)->exists()) {
+            $lastId++;
+            $nomorAnggota = 'RKM-'.str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+        }
+
         Anggota::create([
             'nomor_anggota' => $nomorAnggota,
             'calon_anggota_id' => $calon->id,
@@ -80,7 +93,82 @@ class SekretarisController extends Controller
             'referensi_id' => $calon->id,
         ]);
 
-        return back()->with('success', "Calon anggota {$calon->nama} berhasil diverifikasi.");
+        $waStatus = $this->kirimPesanWa($calon);
+
+        return back()->with('success', "Calon anggota {$calon->nama} berhasil diverifikasi. {$waStatus}");
+    }
+
+    public function kirimWa(Request $request, $id)
+    {
+        $calon = CalonAnggota::with('anggota')->findOrFail($id);
+
+        if (empty($calon->telepon)) {
+            return back()->with('error', "Nomor telepon calon anggota {$calon->nama} tidak tersedia, pesan WhatsApp tidak dapat dikirim.");
+        }
+
+        $waStatus = $this->kirimPesanWa($calon);
+
+        if (str_starts_with($waStatus, 'Pesan WhatsApp berhasil')) {
+            LogAktivitas::create([
+                'user_id' => Auth::id(),
+                'aksi' => 'kirim_wa',
+                'deskripsi' => "Mengirim pesan WhatsApp ke calon anggota {$calon->nama} ({$calon->telepon})",
+                'modul' => 'Sekretaris',
+                'referensi_id' => $calon->id,
+            ]);
+
+            return back()->with('success', $waStatus);
+        }
+
+        return back()->with('error', $waStatus);
+    }
+
+    protected function kirimPesanWa(CalonAnggota $calon): string
+    {
+        if (empty($calon->telepon)) {
+            return 'WhatsApp tidak terkirim (nomor telepon calon anggota kosong).';
+        }
+
+        $pesan = $this->buatPesanWa($calon);
+
+        try {
+            $result = $this->whatsapp->send($calon->telepon, $pesan);
+
+            return isset($result['error'])
+                ? "Pesan WhatsApp gagal dikirim ke {$calon->nama} ({$result['error']})."
+                : "Pesan WhatsApp berhasil dikirim ke {$calon->nama}.";
+        } catch (\Throwable $e) {
+            return "Pesan WhatsApp gagal dikirim ke {$calon->nama} ({$e->getMessage()}).";
+        }
+    }
+
+    protected function buatPesanWa(CalonAnggota $calon): string
+    {
+        $nama = $calon->nama;
+
+        if ($calon->status === 'disetujui') {
+            $nomorAnggota = $calon->anggota?->nomor_anggota ?? '-';
+
+            return "Assalamu'alaikum *$nama*\n\n"
+                . "Kami dari Sekretariat RKM Al-Jannah Banyuwangi ingin menyampaikan kabar baik.\n"
+                . "Data pendaftaran Anda sebagai calon anggota telah *DIVERIFIKASI* dan *DISETUJUI* oleh Sekretaris.\n\n"
+                . "Nomor Anggota: *$nomorAnggota*\n"
+                . "Status: *AKTIF*\n\n"
+                . "Terima kasih atas kepercayaan Anda kepada RKM Al-Jannah Banyuwangi.\n"
+                . "Wassalamu'alaikum warahmatullahi wabarakatuh.";
+        }
+
+        if ($calon->status === 'sudah_membayar') {
+            return "Assalamu'alaikum *$nama*\n\n"
+                . "Pembayaran pendaftaran Anda telah kami *terima*. Data Anda saat ini sedang menunggu verifikasi oleh Sekretaris.\n\n"
+                . "Mohon menunggu informasi selanjutnya. Terima kasih atas kesabaran Anda.\n"
+                . "Wassalamu'alaikum warahmatullahi wabarakatuh.";
+        }
+
+        return "Assalamu'alaikum *$nama*\n\n"
+            . "Data pendaftaran Anda sebagai calon anggota RKM Al-Jannah Banyuwangi telah kami terima dan akan segera kami proses.\n\n"
+            . "Terima kasih.\n"
+            . "Wassalamu'alaikum warahmatullahi wabarakatuh.";
     }
 
     public function log(Request $request)
