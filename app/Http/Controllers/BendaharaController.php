@@ -1434,6 +1434,116 @@ class BendaharaController extends Controller
     }
 
     // ---------------------------------------------------------------
+    //  Export Transaksi
+    // ---------------------------------------------------------------
+
+    public function exportTransaksi(Request $request)
+    {
+        $tipe = $request->input('tipe', '');
+        $kategoriType = $request->input('kategori_type', '');
+        $kategoriId = $request->input('kategori_id', '');
+        $tanggalMulai = $request->input('tanggal_mulai', '');
+        $tanggalAkhir = $request->input('tanggal_akhir', '');
+
+        $transaksi = collect();
+
+        if ($tipe === '' || $tipe === 'pemasukan') {
+            $query = Pemasukan::with('kategoriPemasukan');
+
+            if ($kategoriId !== '' && ($tipe === 'pemasukan' || $kategoriType === 'pemasukan')) {
+                $query->where('kategori_pemasukan_id', $kategoriId);
+            }
+            if ($tanggalMulai !== '') {
+                $query->where('tanggal', '>=', $tanggalMulai);
+            }
+            if ($tanggalAkhir !== '') {
+                $query->where('tanggal', '<=', $tanggalAkhir);
+            }
+
+            $transaksi = $transaksi->merge($query->get()->map(fn($p) => [
+                'tanggal' => $p->tanggal instanceof \Carbon\Carbon
+                    ? $p->tanggal->format('d-m-Y')
+                    : \Carbon\Carbon::parse($p->tanggal)->format('d-m-Y'),
+                'tipe' => 'Pemasukan',
+                'kategori' => $p->kategoriPemasukan?->nama ?? '-',
+                'nominal' => $p->jumlah,
+                'keterangan' => $p->keterangan ?? '-',
+                'created_at' => $p->created_at,
+            ]));
+        }
+
+        if ($tipe === '' || $tipe === 'pengeluaran') {
+            $query = Pengeluaran::with('kategoriPengeluaran');
+
+            if ($kategoriId !== '' && ($tipe === 'pengeluaran' || $kategoriType === 'pengeluaran')) {
+                $query->where('kategori_pengeluaran_id', $kategoriId);
+            }
+            if ($tanggalMulai !== '') {
+                $query->where('tanggal', '>=', $tanggalMulai);
+            }
+            if ($tanggalAkhir !== '') {
+                $query->where('tanggal', '<=', $tanggalAkhir);
+            }
+
+            $transaksi = $transaksi->merge($query->get()->map(fn($p) => [
+                'tanggal' => $p->tanggal instanceof \Carbon\Carbon
+                    ? $p->tanggal->format('d-m-Y')
+                    : \Carbon\Carbon::parse($p->tanggal)->format('d-m-Y'),
+                'tipe' => 'Pengeluaran',
+                'kategori' => $p->kategoriPengeluaran?->nama ?? '-',
+                'nominal' => $p->jumlah,
+                'keterangan' => $p->keterangan ?? '-',
+                'created_at' => $p->created_at,
+            ]));
+        }
+
+        $transaksi = $transaksi->sortByDesc('created_at')->values();
+
+        if ($transaksi->isEmpty()) {
+            return redirect()->back()->with('export_error', 'Data transaksi tidak ditemukan berdasarkan filter yang dipilih.');
+        }
+
+        $filename = 'data-transaksi-' . now()->format('Y-m-d') . '.xlsx';
+        $tempPath = storage_path('app/' . $filename);
+
+        $writer = new Writer();
+        $writer->openToFile($tempPath);
+
+        $writer->addRow(Row::fromValues(['Data Transaksi', now()->format('d-m-Y'), '', '', '']));
+        $writer->addRow(Row::fromValues(['Tanggal', 'Tipe', 'Kategori', 'Nominal', 'Keterangan']));
+
+        foreach ($transaksi as $t) {
+            $nominal = $t['tipe'] === 'Pemasukan'
+                ? '+ ' . number_format($t['nominal'], 0, ',', '.')
+                : '- ' . number_format($t['nominal'], 0, ',', '.');
+            $writer->addRow(Row::fromValues([
+                $t['tanggal'],
+                $t['tipe'],
+                $t['kategori'],
+                $nominal,
+                $t['keterangan'],
+            ]));
+        }
+
+        $totalPemasukan = $transaksi->where('tipe', 'Pemasukan')->sum('nominal');
+        $totalPengeluaran = $transaksi->where('tipe', 'Pengeluaran')->sum('nominal');
+
+        $writer->addRow(Row::fromValues(['', '', '', '', '']));
+        $writer->addRow(Row::fromValues(['Total Pemasukan', '', '', '+ Rp ' . number_format($totalPemasukan, 0, ',', '.'), '']));
+        $writer->addRow(Row::fromValues(['Total Pengeluaran', '', '', '- Rp ' . number_format($totalPengeluaran, 0, ',', '.'), '']));
+        $writer->addRow(Row::fromValues(['Saldo', '', '', 'Rp ' . number_format($totalPemasukan - $totalPengeluaran, 0, ',', '.'), '']));
+
+        $writer->close();
+
+        $headers = [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        return response()->file($tempPath, $headers)->deleteFileAfterSend(true);
+    }
+
+    // ---------------------------------------------------------------
     //  Verifikasi
     // ---------------------------------------------------------------
 

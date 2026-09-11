@@ -31,6 +31,10 @@
             <span class="material-icons" style="font-size:18px;">upload_file</span>
             Import
         </button>
+        <button class="btn-secondary" onclick="openModalExport()" style="display:inline-flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:18px;">download</span>
+            Export
+        </button>
         <a href="{{ route('bendahara.catat-transaksi.template') }}" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;">
             <span class="material-icons" style="font-size:18px;">description</span>
             Template
@@ -51,6 +55,19 @@
     <span class="material-icons">error</span>
     <span id="toastImportMsg"></span>
 </div>
+
+@if(session('export_error'))
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('toastImportMsg');
+    var box = document.getElementById('toastImportError');
+    el.textContent = '{{ session('export_error') }}';
+    box.style.display = 'flex';
+    clearTimeout(box._t);
+    box._t = setTimeout(function() { box.style.display = 'none'; }, 5000);
+});
+</script>
+@endif
 
 <div class="table-card" style="margin-top:24px;">
     <div class="table-wrap">
@@ -284,6 +301,75 @@
             document.getElementById('modalImportResult').classList.add('active');
         });
     }
+
+    function openModalExport() {
+        document.getElementById('modalExport').classList.add('active');
+        document.getElementById('exportTipe').value = '';
+        document.getElementById('exportTanggalMulai').value = '';
+        document.getElementById('exportTanggalAkhir').value = '';
+        toggleExportKategori('');
+    }
+
+    function closeModalExport() {
+        document.getElementById('modalExport').classList.remove('active');
+    }
+
+    function toggleExportKategori(tipe) {
+        var sel = document.getElementById('exportKategori');
+        var html = '<option value="">Semua Kategori</option>';
+        var kPemasukan = window._kategoriPemasukan || [];
+        var kPengeluaran = window._kategoriPengeluaran || [];
+        if (tipe === 'pemasukan') {
+            for (var i = 0; i < kPemasukan.length; i++) {
+                html += '<option value="pemasukan_' + kPemasukan[i].id + '">' + kPemasukan[i].nama + '</option>';
+            }
+        } else if (tipe === 'pengeluaran') {
+            for (var i = 0; i < kPengeluaran.length; i++) {
+                html += '<option value="pengeluaran_' + kPengeluaran[i].id + '">' + kPengeluaran[i].nama + '</option>';
+            }
+        } else {
+            for (var i = 0; i < kPemasukan.length; i++) {
+                html += '<option value="pemasukan_' + kPemasukan[i].id + '">' + kPemasukan[i].nama + '</option>';
+            }
+            for (var i = 0; i < kPengeluaran.length; i++) {
+                html += '<option value="pengeluaran_' + kPengeluaran[i].id + '">' + kPengeluaran[i].nama + '</option>';
+            }
+        }
+        sel.innerHTML = html;
+    }
+
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'exportTipe') toggleExportKategori(e.target.value);
+    });
+
+    function exportTransaksi() {
+        var tipe = document.getElementById('exportTipe').value;
+        var kategoriVal = document.getElementById('exportKategori').value;
+        var tanggalMulai = document.getElementById('exportTanggalMulai').value;
+        var tanggalAkhir = document.getElementById('exportTanggalAkhir').value;
+
+        if (tanggalMulai && tanggalAkhir && tanggalMulai > tanggalAkhir) {
+            alert('Tanggal mulai tidak boleh lebih besar dari tanggal akhir.');
+            return;
+        }
+
+        var params = [];
+        if (tipe) params.push('tipe=' + encodeURIComponent(tipe));
+        if (kategoriVal) {
+            var parts = kategoriVal.split('_');
+            var kategoriType = parts[0];
+            var kategoriId = parts.slice(1).join('_');
+            params.push('kategori_type=' + encodeURIComponent(kategoriType));
+            params.push('kategori_id=' + encodeURIComponent(kategoriId));
+        }
+        if (tanggalMulai) params.push('tanggal_mulai=' + encodeURIComponent(tanggalMulai));
+        if (tanggalAkhir) params.push('tanggal_akhir=' + encodeURIComponent(tanggalAkhir));
+
+        var url = '{{ route("bendahara.catat-transaksi.export") }}' + (params.length ? '?' + params.join('&') : '');
+
+        closeModalExport();
+        window.location.href = url;
+    }
 </script>
 @endsection
 
@@ -434,6 +520,51 @@
         <div id="importResultContent" style="font-size:13px;line-height:1.6;text-align:left;"></div>
         <div class="modal-actions" style="margin-top:16px;">
             <button class="btn-batal" onclick="closeModalImportResult()">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalExport" class="modal-overlay">
+    <div class="modal-bg"></div>
+    <div class="modal-box" style="max-width:520px;">
+        <div class="modal-icon">
+            <span class="material-icons">download</span>
+        </div>
+        <h3>Export Data Transaksi</h3>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;text-align:center;">
+            Pilih filter untuk menentukan data transaksi yang ingin diekspor ke file Excel (.xlsx).
+        </p>
+        <div class="form-group" style="margin-bottom:12px;">
+            <label>Jenis Transaksi</label>
+            <select id="exportTipe" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;appearance:auto;">
+                <option value="">Semua Jenis Transaksi</option>
+                <option value="pemasukan">Pemasukan</option>
+                <option value="pengeluaran">Pengeluaran</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+            <label>Kategori</label>
+            <select id="exportKategori" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;appearance:auto;">
+                <option value="">Semua Kategori</option>
+            </select>
+        </div>
+        <div class="form-row" style="display:flex;gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="flex:1;">
+                <label>Tanggal Mulai</label>
+                <input type="date" id="exportTanggalMulai" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;">
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>Tanggal Akhir</label>
+                <input type="date" id="exportTanggalAkhir" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;">
+            </div>
+        </div>
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:18px;">Filter tanggal bersifat opsional. Jika tidak dipilih, semua data sesuai filter lainnya akan diekspor.</div>
+        <div class="modal-actions">
+            <button class="btn-batal" onclick="closeModalExport()">Tutup</button>
+            <button class="btn-minta" onclick="exportTransaksi()" style="display:inline-flex;align-items:center;gap:6px;">
+                <span class="material-icons" style="font-size:16px;">download</span>
+                Export
+            </button>
         </div>
     </div>
 </div>

@@ -154,6 +154,7 @@ Route::middleware(['auth', 'role:bendahara,superadmin'])->group(function () {
     Route::post('/bendahara/catat-transaksi', [BendaharaController::class, 'storeTransaksi'])->name('bendahara.catat-transaksi.store');
     Route::post('/bendahara/catat-transaksi/import', [BendaharaController::class, 'importTransaksi'])->name('bendahara.catat-transaksi.import');
     Route::get('/bendahara/catat-transaksi/template', [BendaharaController::class, 'downloadTemplateTransaksi'])->name('bendahara.catat-transaksi.template');
+    Route::get('/bendahara/catat-transaksi/export', [BendaharaController::class, 'exportTransaksi'])->name('bendahara.catat-transaksi.export');
 
     Route::post('/bendahara/iuran/generate-access-code', [BendaharaController::class, 'generateAccessCode'])->name('bendahara.iuran.generate-access-code');
 });
