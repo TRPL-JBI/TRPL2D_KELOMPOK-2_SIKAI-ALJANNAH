@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:superadmin'])->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin.dashboard');
+    Route::get('/superadmin/user', [SuperAdminController::class, 'userIndex'])->name('superadmin.user');
     Route::get('/superadmin/log', [SuperAdminController::class, 'logIndex'])->name('superadmin.log');
     Route::get('/superadmin/file', [SuperAdminController::class, 'fileIndex'])->name('superadmin.file');
     Route::post('/superadmin/file/upload', [SuperAdminController::class, 'uploadFile'])->name('superadmin.file.upload');
@@ -139,6 +140,8 @@ Route::middleware(['auth', 'role:bendahara,superadmin'])->group(function () {
     Route::get('/bendahara/iuran', [BendaharaController::class, 'iuran'])->name('bendahara.iuran');
     Route::get('/bendahara/iuran/data', [BendaharaController::class, 'getIuranData'])->name('bendahara.iuran.data');
     Route::post('/bendahara/iuran', [BendaharaController::class, 'storeIuran'])->name('bendahara.iuran.store');
+    Route::post('/bendahara/iuran/kirim-tagihan', [BendaharaController::class, 'kirimTagihanIuran'])->name('bendahara.iuran.kirim-tagihan');
+    Route::post('/bendahara/iuran/kirim-kwitansi', [BendaharaController::class, 'kirimKwitansiIuran'])->name('bendahara.iuran.kirim-kwitansi');
 
     Route::get('/bendahara/laporan', [BendaharaController::class, 'laporan'])->name('bendahara.laporan');
     Route::get('/bendahara/laporan/data', [BendaharaController::class, 'getLaporanData'])->name('bendahara.laporan.data');
@@ -204,6 +207,7 @@ Route::middleware(['auth', 'role:adminweb'])->group(function () {
     Route::get('/adminweb/whatsapp/refresh', [WhatsAppController::class, 'refresh'])->name('adminweb.whatsapp.refresh');
     Route::post('/adminweb/whatsapp/connect-qr', [WhatsAppController::class, 'connectQr'])->name('adminweb.whatsapp.connect-qr');
     Route::post('/adminweb/whatsapp/send', [WhatsAppController::class, 'send'])->name('adminweb.whatsapp.send');
+    Route::post('/adminweb/whatsapp/send-test-file', [WhatsAppController::class, 'sendTestFile'])->name('adminweb.whatsapp.send-test-file');
     Route::post('/adminweb/whatsapp/logout', [WhatsAppController::class, 'logout'])->name('adminweb.whatsapp.logout');
     Route::get('/adminweb/whatsapp/server/status', [WhatsAppController::class, 'serverStatusJson'])->name('adminweb.whatsapp.server-status');
     Route::post('/adminweb/whatsapp/server/start', [WhatsAppController::class, 'startServer'])->name('adminweb.whatsapp.server-start');

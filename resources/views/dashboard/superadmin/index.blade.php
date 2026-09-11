@@ -1,210 +1,185 @@
 @extends('layouts.dashboard', [
     'menuItems' => [
-        ['label' => 'Beranda', 'url' => '/superadmin', 'active' => 'superadmin'],
-        ['label' => 'File', 'url' => '/superadmin/file', 'active' => 'superadmin/file'],
-        ['label' => 'Log', 'url' => '/superadmin/log', 'active' => 'superadmin/log'],
+        ['label' => 'Dashboard', 'url' => '/superadmin', 'active' => 'superadmin'],
+        ['label' => 'Manajemen User', 'url' => '/superadmin/user', 'active' => 'superadmin/user'],
+        ['label' => 'Storage File', 'url' => '/superadmin/file', 'active' => 'superadmin/file'],
+        ['label' => 'Log Aktivitas', 'url' => '/superadmin/log', 'active' => 'superadmin/log'],
     ]
 ])
 
-@section('title', 'Dashboard Super Admin')
+@section('title', 'Dashboard Superadmin')
 
 @section('content')
-    @if(session('success'))
-        <div style="background-color: #d8efdd; border: 1px solid #35ab50; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; color: #154420;">
-            <span class="material-icons" style="color: #35ab50; font-size: 20px;">check_circle</span>
-            {{ session('success') }}
-        </div>
-    @endif
-
-    <h1 style="font-size: 24px; font-weight: 700; color: #16423c; margin-bottom: 30px;">Dashboard</h1>
-    
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-label"><span class="material-icons" style="vertical-align: middle; margin-right: 4px;">people</span> User</div>
-            <div class="stat-value">{{ $totalUsers }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label"><span class="material-icons" style="vertical-align: middle; margin-right: 4px;">person_check</span> User Aktif</div>
-            <div class="stat-value">{{ $activeUsers }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label"><span class="material-icons" style="vertical-align: middle; margin-right: 4px;">schedule</span> File diperiksa</div>
-            <div class="stat-value">{{ count($files) }}</div>
+    {{-- Page Header --}}
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px;">
+        <div>
+            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-400);">Manajemen Pengguna</span>
+            <h1 style="font-size: 28px; font-weight: 800; color: var(--primary-500); margin: 4px 0 0 0;">Dashboard Monitoring</h1>
+            <p style="font-size: 14px; color: var(--primary-500); margin-top: 6px;">Monitor seluruh aktivitas dan kapasitas data sistem secara real-time.</p>
         </div>
     </div>
 
-    <x-dashboard.data-table
-        title="Daftar User"
-        :headers="['Nomor', 'Nama User', 'Dibuat', 'Status', 'Role', 'Aksi']"
-        :paginator="$users"
-        search-placeholder="Cari user..."
-        action-url="javascript:void(0)"
-        action-label="Tambah User"
-        action-icon="add"
-        action-id="btnTambahUser"
-    >
-        @foreach($users as $index => $user)
-            <tr>
-                <td>{{ $users->firstItem() + $index }}</td>
-                <td>{{ $user->nama }}</td>
-                <td>{{ $user->created_at->format('d/m/Y') }}</td>
-                <td>
-                    <span class="badge {{ $user->status === 'aktif' ? 'badge-success' : 'badge-danger' }}">
-                        {{ $user->status === 'aktif' ? 'Aktif' : 'Non-Aktif' }}
-                    </span>
-                </td>
-                <td>{{ ucfirst($user->role) }}</td>
-                <td>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-sm btn-outline-primary"
-                                onclick="openEditModal(this)"
-                                data-id="{{ $user->id }}"
-                                data-nama="{{ $user->nama }}"
-                                data-email="{{ $user->email }}"
-                                data-role="{{ $user->role }}"
-                                data-status="{{ $user->status }}">
-                            <span class="material-icons" style="font-size: 16px;">edit</span>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        @endforeach
-    </x-dashboard.data-table>
-
-    <!-- Modal Tambah User -->
-    <div class="modal-overlay" id="tambahUserModal">
-        <div class="modal" style="max-width: 520px;">
-            <div class="modal-header">
-                <h3 class="modal-title">Tambah User</h3>
-                <button class="modal-close" onclick="closeTambahModal()">&times;</button>
+    {{-- Stats Grid: 4 cards --}}
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;">
+        <div class="card" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-500);">Total User</div>
+                    <div style="font-size: 20px; font-weight: 800; color: var(--primary-500); margin-top: 4px;">{{ $totalUsers }}</div>
+                </div>
+                <span class="material-icons" style="color: var(--primary-400); font-size: 18px;">users</span>
             </div>
-            <form id="tambahUserForm" method="POST" action="/superadmin/user">
-                @csrf
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="tambah_nama" class="form-label">Nama User</label>
-                        <input type="text" id="tambah_nama" name="nama" class="form-input" required maxlength="255">
-                    </div>
-                    <div class="form-group">
-                        <label for="tambah_email" class="form-label">Email</label>
-                        <input type="email" id="tambah_email" name="email" class="form-input" required maxlength="255">
-                    </div>
-                    <div class="form-group">
-                        <label for="tambah_password" class="form-label">Password</label>
-                        <input type="password" id="tambah_password" name="password" class="form-input" required minlength="8" autocomplete="new-password">
-                    </div>
-                    <div class="form-group">
-                        <label for="tambah_role" class="form-label">Role</label>
-                        <select id="tambah_role" name="role" class="form-select" required>
-                            <option value="ketua">Ketua</option>
-                            <option value="sekretaris">Sekretaris</option>
-                            <option value="bendahara">Bendahara</option>
-                            <option value="logistik">Logistik</option>
-                            <option value="superadmin">Super Admin</option>
-                            <option value="adminweb">Admin Web</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="tambah_status" class="form-label">Status</label>
-                        <select id="tambah_status" name="status" class="form-select" required>
-                            <option value="aktif">Aktif</option>
-                            <option value="non_aktif">Non-Aktif</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-primary" onclick="closeTambahModal()" style="font-weight: 600;">Batal</button>
-                    <button type="submit" class="btn btn-primary" style="font-weight: 600;">Simpan</button>
-                </div>
-            </form>
         </div>
-    </div>
-
-    <!-- Modal Edit User -->
-    <div class="modal-overlay" id="editUserModal">
-        <div class="modal" style="max-width: 520px;">
-            <div class="modal-header">
-                <h3 class="modal-title">Edit User</h3>
-                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        <div class="card" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-500);">Total Files</div>
+                    <div style="font-size: 20px; font-weight: 800; color: var(--primary-500); margin-top: 4px;">{{ $totalFiles }}</div>
+                </div>
+                <span class="material-icons" style="color: var(--info-400); font-size: 18px;">description</span>
             </div>
-            <form id="editUserForm" method="POST">
-                @csrf
-                @method('PUT')
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="edit_nama" class="form-label">Nama User</label>
-                        <input type="text" id="edit_nama" name="nama" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="edit_email" class="form-label">Email</label>
-                        <input type="email" id="edit_email" name="email" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="edit_password" class="form-label">Password <span style="font-weight: 400; color: #828282; font-size: 0.8rem;">(kosongkan jika tidak diubah)</span></label>
-                        <input type="password" id="edit_password" name="password" class="form-input" autocomplete="new-password">
-                    </div>
-                    <div class="form-group">
-                        <label for="edit_role" class="form-label">Role</label>
-                        <select id="edit_role" name="role" class="form-select" required>
-                            <option value="ketua">Ketua</option>
-                            <option value="sekretaris">Sekretaris</option>
-                            <option value="bendahara">Bendahara</option>
-                            <option value="logistik">Logistik</option>
-                            <option value="superadmin">Super Admin</option>
-                            <option value="adminweb">Admin Web</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="edit_status" class="form-label">Status</label>
-                        <select id="edit_status" name="status" class="form-select" required>
-                            <option value="aktif">Aktif</option>
-                            <option value="non_aktif">Non-Aktif</option>
-                        </select>
-                    </div>
+        </div>
+        <div class="card" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-500);">Aktivitas</div>
+                    <div style="font-size: 20px; font-weight: 800; color: var(--success-500); margin-top: 4px;">{{ $totalLogs }}</div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-primary" onclick="closeEditModal()" style="font-weight: 600;">Batal</button>
-                    <button type="submit" class="btn btn-primary" style="font-weight: 600;">Edit</button>
+                <span class="material-icons" style="color: var(--success-400); font-size: 18px;">activity</span>
+            </div>
+        </div>
+        <div class="card" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-500);">User Aktif</div>
+                    <div style="font-size: 20px; font-weight: 800; color: var(--success-500); margin-top: 4px;">{{ $activeUsers }}</div>
                 </div>
-            </form>
+                <span class="material-icons" style="color: var(--warning-400); font-size: 18px;">person_check</span>
+            </div>
         </div>
     </div>
 
-    <script>
-        function openEditModal(button) {
-            document.getElementById('edit_nama').value = button.dataset.nama;
-            document.getElementById('edit_email').value = button.dataset.email;
-            document.getElementById('edit_password').value = '';
-            document.getElementById('edit_role').value = button.dataset.role;
-            document.getElementById('edit_status').value = button.dataset.status;
-            document.getElementById('editUserForm').action = '/superadmin/user/' + button.dataset.id;
-            document.getElementById('editUserModal').classList.add('active');
-        }
+    {{-- Chart + Activity --}}
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px;">
+        {{-- Weekly Activity --}}
+        <div class="card" style="padding: 20px;">
+            <h2 style="font-size: 14px; font-weight: 700; color: var(--primary-500); margin: 0 0 20px 0;">Aktivitas Mingguan</h2>
+            @php
+                $maxVal = max(array_column($weeklyActivity, 'count'));
+                if ($maxVal === 0) $maxVal = 1; // Prevent division by zero
+            @endphp
+            <div style="display: flex; gap: 12px; height: 200px; align-items: flex-end;">
+                @foreach($weeklyActivity as $item)
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                        <div style="width: 100%; background: linear-gradient(180deg, var(--primary-400), var(--primary-600)); border-radius: 6px 6px 0 0; height: {{ $maxVal > 0 ? ($item['count'] / $maxVal) * 150 : 0 }}px; min-height: {{ $item['count'] > 0 ? '20px' : '4px' }}; transition: height 0.5s ease;"></div>
+                        <span style="font-size: 10px; font-weight: 600; color: var(--primary-500);">{{ $item['day'] }}</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
 
-        function closeEditModal() {
-            document.getElementById('editUserModal').classList.remove('active');
-        }
+        {{-- Activity Feed --}}
+        <div class="card" style="padding: 20px;">
+            <h2 style="font-size: 14px; font-weight: 700; color: var(--primary-500); margin: 0 0 16px 0;">Feed Aktivitas</h2>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                @forelse($recentLogs as $log)
+                    <div style="display: flex; gap: 12px;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-400); margin-top: 6px; flex-shrink: 0;"></div>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 600; color: var(--primary-500);">{{ $log->user->nama ?? 'System' }}</div>
+                            <div style="font-size: 12px; color: var(--primary-500); margin-top: 2px;">{{ $log->deskripsi }}</div>
+                            <div style="font-size: 10px; color: var(--primary-400); margin-top: 4px;">{{ $log->created_at->diffForHumans() }}</div>
+                        </div>
+                    </div>
+                @empty
+                    <div style="font-size: 12px; color: var(--primary-500); text-align: center; padding: 20px;">Belum ada aktivitas</div>
+                @endforelse
+            </div>
+        </div>
+    </div>
 
-        document.getElementById('editUserModal').addEventListener('click', function(e) {
-            if (e.target === this) closeEditModal();
-        });
+    {{-- Storage + Roles --}}
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+        {{-- Storage Usage --}}
+        <div class="card" style="padding: 20px;">
+            <h2 style="font-size: 14px; font-weight: 700; color: var(--primary-500); margin: 0 0 16px 0;">Storage Usage</h2>
+            @php
+                $storageColors = [
+                    'pdf' => 'var(--danger-400)',
+                    'doc' => 'var(--primary-400)',
+                    'xls' => 'var(--success-400)',
+                    'img' => 'var(--info-400)',
+                    'vid' => 'var(--warning-400)',
+                    'zip' => 'var(--secondary-400)',
+                    'lainnya' => 'var(--secondary-300)',
+                ];
+                $storageLabels = [
+                    'pdf' => 'PDF',
+                    'doc' => 'Dokumen',
+                    'xls' => 'Spreadsheet',
+                    'img' => 'Gambar',
+                    'vid' => 'Video',
+                    'zip' => 'Archive',
+                    'lainnya' => 'Lainnya',
+                ];
+            @endphp
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--primary-500); margin-bottom: 8px;">
+                <span>{{ $totalFiles }} Total File</span>
+                <span>{{ number_format($totalSize / 1024, 1) }} KB</span>
+            </div>
+            <div style="height: 8px; background: var(--secondary-100); border-radius: 4px; overflow: hidden; margin-bottom: 16px;">
+                <div style="width: {{ $totalFiles > 0 ? 100 : 0 }}%; height: 100%; background: linear-gradient(90deg, var(--primary-400), var(--primary-600)); border-radius: 4px; transition: width 0.5s ease;"></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                @forelse($storageCategories as $kategori => $count)
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 10px; height: 10px; border-radius: 3px; background: {{ $storageColors[$kategori] ?? 'var(--secondary-300)' }};"></div>
+                         <span style="font-size: 12px; color: var(--primary-500); flex: 1;">{{ $storageLabels[$kategori] ?? ucfirst($kategori) }}</span>
+                        <span style="font-size: 12px; font-weight: 600; color: var(--primary-500);">{{ $count }} File</span>
+                    </div>
+                @empty
+                    <div style="font-size: 12px; color: var(--primary-500); text-align: center; padding: 20px;">Belum ada file</div>
+                @endforelse
+            </div>
+        </div>
 
-        function openTambahModal() {
-            document.getElementById('tambahUserForm').reset();
-            document.getElementById('tambahUserModal').classList.add('active');
-        }
-
-        function closeTambahModal() {
-            document.getElementById('tambahUserModal').classList.remove('active');
-        }
-
-        document.getElementById('tambahUserModal').addEventListener('click', function(e) {
-            if (e.target === this) closeTambahModal();
-        });
-
-        document.getElementById('btnTambahUser').addEventListener('click', function(e) {
-            e.preventDefault();
-            openTambahModal();
-        });
-    </script>
+        {{-- Role Distribution --}}
+        <div class="card" style="padding: 20px;">
+            <h2 style="font-size: 14px; font-weight: 700; color: var(--primary-500); margin: 0 0 16px 0;">Role Distribution</h2>
+            @php
+                $roleColors = [
+                    'superadmin' => 'var(--danger-400)',
+                    'ketua' => 'var(--info-400)',
+                    'sekretaris' => 'var(--warning-400)',
+                    'bendahara' => 'var(--success-400)',
+                    'logistik' => 'var(--primary-400)',
+                    'adminweb' => 'var(--secondary-400)',
+                ];
+                $roleLabels = [
+                    'superadmin' => 'Super Admin',
+                    'ketua' => 'Ketua',
+                    'sekretaris' => 'Sekretaris',
+                    'bendahara' => 'Bendahara',
+                    'logistik' => 'Logistik',
+                    'adminweb' => 'Admin Web',
+                ];
+                $totalRoles = array_sum($roleDistribution);
+            @endphp
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                @forelse($roleDistribution as $role => $count)
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--primary-500); margin-bottom: 4px;">
+                            <span>{{ $roleLabels[$role] ?? ucfirst($role) }}</span>
+                            <span>{{ $count }}</span>
+                        </div>
+                        <div style="height: 6px; background: var(--secondary-100); border-radius: 3px; overflow: hidden;">
+                            <div style="width: {{ $totalRoles > 0 ? ($count / $totalRoles) * 100 : 0 }}%; height: 100%; background: {{ $roleColors[$role] ?? 'var(--secondary-400)' }}; border-radius: 3px; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                @empty
+                    <div style="font-size: 12px; color: var(--primary-500); text-align: center; padding: 20px;">Belum ada data role</div>
+                @endforelse
+            </div>
+        </div>
+    </div>
 @endsection

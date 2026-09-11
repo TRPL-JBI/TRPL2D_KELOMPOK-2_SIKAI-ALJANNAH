@@ -100,6 +100,14 @@ class WhatsAppService
     }
 
     /**
+     * Apakah sesi WhatsApp sudah tertaut & siap (status "ready").
+     */
+    public function isReady(): bool
+    {
+        return ($this->status()['status'] ?? '') === 'ready';
+    }
+
+    /**
      * Kirim pesan teks lewat sesi web sidecar.
      *
      * @return array<string, mixed>
@@ -108,6 +116,27 @@ class WhatsAppService
     {
         try {
             $result = WhatsApp::web(self::SESSION_ID)->messages()->sendText($this->normalizeNumber($to), $text);
+
+            return is_array($result) ? $result : ['success' => true];
+        } catch (\Throwable $e) {
+            return ['error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Kirim dokumen (mis. PDF kwitansi) sebagai lampiran lewat sesi web sidecar.
+     *
+     * @return array<string, mixed>
+     */
+    public function sendDocument(string $to, string $base64, string $filename, string $mimeType, ?string $caption = null): array
+    {
+        try {
+            $result = WhatsApp::web(self::SESSION_ID)->messages()->sendDocument($this->normalizeNumber($to), array_filter([
+                'base64' => $base64,
+                'mimeType' => $mimeType,
+                'filename' => $filename,
+                'caption' => $caption,
+            ]));
 
             return is_array($result) ? $result : ['success' => true];
         } catch (\Throwable $e) {

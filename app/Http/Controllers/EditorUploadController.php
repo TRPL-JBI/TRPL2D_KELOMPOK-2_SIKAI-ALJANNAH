@@ -7,6 +7,7 @@ use App\Services\FileRenamer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use App\Models\LogSuperadmin;
 
 class EditorUploadController extends Controller
 {
@@ -49,6 +50,15 @@ class EditorUploadController extends Controller
             ->withCustomProperties(['uploaded_by' => auth()->id()])
             ->usingFileName(FileRenamer::rename($originalName))
             ->toMediaCollection('uploads');
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'upload',
+            'deskripsi' => 'Upload file via editor: ' . $originalName,
+            'modul' => 'editor',
+            'referensi_id' => $fileRecord->id,
+            'ip_address' => request()->ip(),
+        ]);
 
         $url = $fileRecord->getDownloadUrl();
 

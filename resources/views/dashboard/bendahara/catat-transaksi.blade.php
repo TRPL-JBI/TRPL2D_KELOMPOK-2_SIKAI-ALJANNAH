@@ -44,7 +44,7 @@
 
 <div id="toastSuccess" class="toast-success">
     <span class="material-icons">check_circle</span>
-    Transaksi berhasil dicatat
+    <span id="toastSuccessMsg">Transaksi berhasil dicatat</span>
 </div>
 
 <div id="toastImportError" class="toast-success" style="display:none;background:#dc2626;">
@@ -110,6 +110,8 @@
         document.getElementById('formKategori').innerHTML = '<option value="">Pilih kategori</option>';
         document.getElementById('formNominal').value = '';
         document.getElementById('formKeterangan').value = '';
+        document.getElementById('formWaNama').value = '';
+        document.getElementById('formWaPenerima').value = '';
         document.querySelector('#modalTransaksi .upload-placeholder').textContent = 'Upload here...';
         toggleKategori('pemasukan');
     }
@@ -131,6 +133,15 @@
         if (e.target.id === 'formTipe') toggleKategori(e.target.value);
     });
 
+    function showTransaksiToast(msg) {
+        var el = document.getElementById('toastSuccessMsg');
+        var box = document.getElementById('toastSuccess');
+        el.textContent = msg;
+        box.style.display = 'flex';
+        clearTimeout(box._t);
+        box._t = setTimeout(function() { box.style.display = 'none'; }, 4000);
+    }
+
     function simpanTransaksi() {
         var btn = window._loadingBtn;
         var tipe = document.getElementById('formTipe').value;
@@ -149,6 +160,8 @@
         formData.append('kategori_id', kategori);
         formData.append('jumlah', nominal.replace(/[^0-9]/g, ''));
         formData.append('keterangan', keterangan);
+        formData.append('wa_nama', document.getElementById('formWaNama').value.trim());
+        formData.append('wa_penerima', document.getElementById('formWaPenerima').value.trim());
         formData.append('file_bukti', file.files[0]);
 
         fetchAPI('/bendahara/catat-transaksi', {
@@ -166,8 +179,8 @@
             var row = document.createElement('tr');
             tbody.insertBefore(row, tbody.firstChild);
             row.outerHTML = '<tr data-target-table="' + (d.tipe === 'Pemasukan' ? 'pemasukan' : 'pengeluaran') + '" data-jumlah="' + d.jumlah + '" data-kategori="' + (d.kategori || '') + '" data-keterangan="' + (d.keterangan || '') + '" data-tanggal="' + d.tanggal + '" data-tipe="' + d.tipe + '" data-file-url="' + (d.file_url || '') + '"><td data-target-id="' + d.id + '">' + d.tanggal + '</td><td><span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;' + (d.tipe === 'Pemasukan' ? 'background:#d1fae5;color:#065f46;' : 'background:#fee2e2;color:#991b1b;') + '">' + d.tipe + '</span></td><td class="nominal-value">Rp ' + Number(d.jumlah).toLocaleString('id-ID') + '</td><td class="name-cell">' + d.kategori + '</td><td>' + (d.keterangan || '-') + '</td><td><button class="btn-icon btn-info" onclick="openInfoModal(this)" title="Detail Transaksi"><span class="material-icons">info</span></button><button class="btn-edit-disabled" onclick="openModal(this)"><span class="material-icons">lock</span> Edit</button></td></tr>';
-            document.getElementById('toastSuccess').style.display = 'flex';
-            setTimeout(function() { document.getElementById('toastSuccess').style.display = 'none'; }, 3500);
+            var waMsg = d.wa === 'terkirim' ? ' & kwitansi terkirim via WA' : (d.wa === 'gagal' ? ' (kwitansi WA gagal)' : '');
+            showTransaksiToast('Transaksi berhasil dicatat' + waMsg);
             enableBtn(btn);
         })
         .catch(function(e) { console.error(e); alert('Gagal: ' + e.message); enableBtn(btn); });
@@ -313,6 +326,15 @@
         <div class="form-group" style="margin-bottom:12px;">
             <label>Keterangan</label>
             <textarea id="formKeterangan" placeholder="Tulis keterangan transaksi..." style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;resize:vertical;min-height:80px;box-sizing:border-box;"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+            <label>Nama Penerima Kwitansi (opsional)</label>
+            <input type="text" id="formWaNama" placeholder="Contoh: Budi Santoso" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;">
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Isi bersama No. WhatsApp untuk mengirim kwitansi pembayaran.</div>
+        </div>
+        <div class="form-group" style="margin-bottom:18px;">
+            <label>No. WhatsApp Penerima Kwitansi (opsional)</label>
+            <input type="text" id="formWaPenerima" placeholder="Contoh: 6281234567890 (tanpa 0 di depan)" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;">
         </div>
         <div class="form-group" style="margin-bottom:18px;">
             <label>Upload Bukti Transaksi</label>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CalonAnggota;
 use App\Models\KeluargaAnggota;
 use Illuminate\Http\Request;
+use App\Models\LogSuperadmin;
 
 class PendaftaranController extends Controller
 {
@@ -39,6 +40,15 @@ class PendaftaranController extends Controller
             'rt_rw' => $validated['rt_rw'],
             'kelurahan' => $validated['kelurahan'],
             'status' => 'menunggu_verifikasi',
+        ]);
+
+        LogSuperadmin::create([
+            'user_id' => null,
+            'aksi' => 'create',
+            'deskripsi' => 'Pendaftaran anggota baru: ' . $validated['nama_lengkap'],
+            'modul' => 'pendaftaran',
+            'referensi_id' => $calon->id,
+            'ip_address' => request()->ip(),
         ]);
 
         if (!empty($validated['nama_ditanggung'])) {

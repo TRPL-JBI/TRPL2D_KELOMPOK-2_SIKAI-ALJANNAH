@@ -280,6 +280,24 @@
                 </button>
             </form>
         </div>
+
+        <div class="wa-card full">
+            <h3><span class="material-icons">picture_as_pdf</span> Uji Kirim File (Kwitansi PDF)</h3>
+            <p style="font-size:13px;color:var(--primary-400);margin-bottom:16px;">
+                Generate PDF kwitansi uji coba lalu kirim sebagai dokumen untuk memastikan pengiriman file berfungsi.
+            </p>
+            <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:end;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Nomor Tujuan</label>
+                    <input type="text" id="testFileTo" value="{{ preg_replace('/^\+/', '', $status['phone'] ?? '') }}" placeholder="6281234567890">
+                    <small style="display:block;font-size:12px;color:var(--primary-400);margin-top:6px;">Kode negara + nomor, tanpa 0 di depan. Default: nomor yang terhubung.</small>
+                </div>
+                <button type="button" id="testFileBtn" class="btn-wa-primary">
+                    <span class="material-icons">picture_as_pdf</span> Kirim File Kwitansi Uji Coba
+                </button>
+            </div>
+            <div id="testFileResult" style="display:none;margin-top:16px;"></div>
+        </div>
     </div>
 </div>
 @endsection
@@ -439,6 +457,59 @@
                 setTimeout(pollBoot, 5000);
             });
         })();
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    var testFileBtn = document.getElementById('testFileBtn');
+    if (testFileBtn) {
+        var testFileResult = document.getElementById('testFileResult');
+        testFileBtn.addEventListener('click', function() {
+            var to = document.getElementById('testFileTo').value.trim();
+            if (!to) {
+                testFileResult.style.display = '';
+                testFileResult.innerHTML = '<div class="alert-error"><span class="material-icons">error</span> Nomor tujuan wajib diisi.</div>';
+                return;
+            }
+
+            var orig = testFileBtn.innerHTML;
+            testFileBtn.disabled = true;
+            testFileBtn.innerHTML = '<span class="btn-spinner"></span> Mengirim...';
+            testFileResult.style.display = 'none';
+
+            var fd = new FormData();
+            fd.append('to', to);
+
+            fetch('{{ route("adminweb.whatsapp.send-test-file") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: fd,
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                testFileBtn.disabled = false;
+                testFileBtn.innerHTML = orig;
+                testFileResult.style.display = '';
+                if (data.error) {
+                    testFileResult.innerHTML = '<div class="alert-error"><span class="material-icons">error</span> Gagal mengirim: <code style="background:rgba(204,0,34,.1);padding:2px 8px;border-radius:4px;white-space:pre-wrap;word-break:break-all;">' + escapeHtml(data.error) + '</code></div>';
+                } else {
+                    testFileResult.innerHTML = '<div class="alert-success"><span class="material-icons">check_circle</span> ' + escapeHtml(data.message || 'File berhasil dikirim.') + '</div>';
+                }
+            })
+            .catch(function() {
+                testFileBtn.disabled = false;
+                testFileBtn.innerHTML = orig;
+                testFileResult.style.display = '';
+                testFileResult.innerHTML = '<div class="alert-error"><span class="material-icons">error</span> Gagal menghubungi server.</div>';
+            });
+        });
     }
 })();
 </script>

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\KwitansiService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use App\Models\LogSuperadmin;
 
 class WhatsAppController extends Controller
 {
@@ -69,11 +71,65 @@ class WhatsAppController extends Controller
 
         $result = $this->service->send($request->input('to'), $request->input('text'));
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Kirim WhatsApp ke: ' . $request->input('to'),
+            'modul' => 'whatsapp',
+            'ip_address' => request()->ip(),
+        ]);
+
         if (!empty($result['error'])) {
             return back()->with('error', $result['error']);
         }
 
         return back()->with('success', 'Pesan berhasil dikirim');
+    }
+
+    public function sendTestFile(Request $request)
+    {
+        $request->validate([
+            'to' => 'required|string',
+        ]);
+
+        if (! $this->service->isReady()) {
+            return response()->json(['error' => 'WhatsApp belum terhubung.']);
+        }
+
+        try {
+            $kwitansi = app(KwitansiService::class)->pdf([
+                'no' => 'KWT-UJI-'.date('YmdHis'),
+                'nama' => 'Anggota Uji Coba',
+                'peruntukan' => 'Iuran Bulan '.now()->translatedFormat('F Y'),
+                'tanggal' => now()->translatedFormat('d F Y'),
+                'nominal' => 10000,
+                'dibayar_oleh' => 'Anggota Uji Coba',
+            ]);
+
+            $result = $this->service->sendDocument(
+                $request->input('to'),
+                $kwitansi,
+                'Kwitansi-Uji-Coba.pdf',
+                'application/pdf',
+                'Uji kirim file kwitansi dari AdminWeb.'
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()]);
+        }
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Kirim file uji WhatsApp ke: ' . $request->input('to'),
+            'modul' => 'whatsapp',
+            'ip_address' => request()->ip(),
+        ]);
+
+        if (! empty($result['error'])) {
+            return response()->json(['error' => $result['error']]);
+        }
+
+        return response()->json(['message' => 'File kwitansi berhasil dikirim.']);
     }
 
     public function logout()

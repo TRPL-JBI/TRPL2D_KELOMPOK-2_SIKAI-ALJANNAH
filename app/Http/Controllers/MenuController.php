@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Menu;
 use Illuminate\Http\Request;
+use App\Models\LogSuperadmin;
 
 class MenuController extends Controller
 {
@@ -42,6 +43,14 @@ class MenuController extends Controller
         $data['sort_order'] = $data['sort_order'] ?? Menu::max('sort_order') + 1;
 
         Menu::create($data);
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => 'Menambahkan menu: ' . $data['label'],
+            'modul' => 'menu',
+            'ip_address' => request()->ip(),
+        ]);
 
         return redirect()->route('adminweb.menus')
             ->with('success', 'Menu "' . e($data['label']) . '" berhasil ditambahkan.');
@@ -88,6 +97,15 @@ class MenuController extends Controller
 
         $menu->update($data);
 
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'update',
+            'deskripsi' => 'Memperbarui menu: ' . $menu->label,
+            'modul' => 'menu',
+            'referensi_id' => $menu->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->route('adminweb.menus')
             ->with('success', 'Menu "' . e($menu->label) . '" berhasil diperbarui.');
     }
@@ -96,6 +114,16 @@ class MenuController extends Controller
     {
         $menu = Menu::findOrFail($id);
         $label = $menu->label;
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'delete',
+            'deskripsi' => 'Menghapus menu: ' . $label,
+            'modul' => 'menu',
+            'referensi_id' => $menu->id,
+            'ip_address' => request()->ip(),
+        ]);
+
         $menu->delete();
 
         return redirect()->route('adminweb.menus')
@@ -107,6 +135,15 @@ class MenuController extends Controller
         $menu = Menu::findOrFail($id);
         $menu->update([
             'is_active' => !$menu->is_active,
+        ]);
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'update',
+            'deskripsi' => ($menu->is_active ? 'Mengaktifkan' : 'Menonaktifkan') . ' menu: ' . $menu->label,
+            'modul' => 'menu',
+            'referensi_id' => $menu->id,
+            'ip_address' => request()->ip(),
         ]);
 
         return redirect()->route('adminweb.menus')

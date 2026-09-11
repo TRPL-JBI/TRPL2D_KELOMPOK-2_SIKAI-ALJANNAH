@@ -17,6 +17,11 @@
         <p class="vp-subheader">Konfirmasi pembayaran pendaftaran anggota baru sebesar Rp 30.000</p>
     </div>
 
+    <div id="vpToast" class="toast-notif" style="display:none;">
+        <span class="material-icons">check_circle</span>
+        <span id="vpToastMsg">Pembayaran terverifikasi</span>
+    </div>
+
     <div class="vp-card">
         <div class="vp-card-header">
             <h3>Calon Anggota Menunggu Pembayaran</h3>
@@ -44,6 +49,15 @@
         if (!document.getElementById('vpBody')) return;
 
         var data = [];
+
+        function showVpToast(msg) {
+            var el = document.getElementById('vpToastMsg');
+            var box = document.getElementById('vpToast');
+            el.textContent = msg;
+            box.style.display = 'flex';
+            clearTimeout(box._t);
+            box._t = setTimeout(function() { box.style.display = 'none'; }, 4000);
+        }
 
         function fetchVerifikasiData() {
             fetch('/bendahara/verifikasi/data')
@@ -81,8 +95,15 @@
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
             })
             .then(function(res) {
-                if (res.success) fetchVerifikasiData();
-                else alert(res.message || 'Gagal verifikasi');
+                if (res.success) {
+                    fetchVerifikasiData();
+                    var msg = 'Pembayaran terverifikasi';
+                    if (res.wa === 'terkirim') msg += ' & kwitansi terkirim via WhatsApp';
+                    else if (res.wa === 'gagal') msg += ' (kwitansi WhatsApp gagal terkirim)';
+                    showVpToast(msg);
+                } else {
+                    alert(res.message || 'Gagal verifikasi');
+                }
                 enableBtn(btn);
             })
             .catch(function(e) { console.error(e); alert('Gagal: ' + e.message); enableBtn(btn); });

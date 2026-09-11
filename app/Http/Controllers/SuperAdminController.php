@@ -8,6 +8,7 @@ use App\Models\LogSuperadmin;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -18,141 +19,94 @@ class SuperAdminController extends Controller
 {
     public function index(Request $request)
     {
+        $totalUsers = User::count();
+        $activeUsers = User::where('status', 'aktif')->count();
+
+        // Scan filesystem for real file count and size (same as file page)
+        $allFiles = collect();
+        $this->scanDirectory(storage_path('app'), $allFiles);
+        $totalFiles = $allFiles->count();
+        $totalSize = $allFiles->sum('size');
+
+        // Storage usage by file type (from filesystem)
+        $storageCategories = $allFiles->groupBy('kategori')->map(fn($items) => $items->count())->toArray();
+
+        // Weekly activity data (last 7 days) - includes ALL modules
+        $weeklyActivity = [];
+        $days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $count = LogSuperadmin::whereDate('created_at', $date)->count();
+            $weeklyActivity[] = [
+                'day' => $days[$date->dayOfWeek],
+                'count' => $count,
+            ];
+        }
+
+        // Role distribution
+        $roleDistribution = User::select('role', \DB::raw('count(*) as total'))
+            ->groupBy('role')
+            ->pluck('total', 'role')
+            ->toArray();
+
+        // Recent logs for activity feed (from all modules)
+        $recentLogs = LogSuperadmin::with('user')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $totalLogs = LogSuperadmin::count();
+
+        return view('dashboard.superadmin.index', compact(
+            'totalUsers', 'activeUsers', 'totalFiles', 'totalSize', 'totalLogs',
+            'storageCategories', 'weeklyActivity', 'roleDistribution', 'recentLogs'
+        ));
+    }
+
+    public function userIndex(Request $request)
+    {
         $search = $request->get('search');
+        $role = $request->get('role');
+        $status = $request->get('status');
 
         $users = User::when($search, function ($query, $search) {
             return $query->where('nama', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%");
+        })->when($role, function ($query, $role) {
+            return $query->where('role', $role);
+        })->when($status, function ($query, $status) {
+            return $query->where('status', $status);
         })->paginate(20)->withQueryString();
 
         $totalUsers = User::count();
         $activeUsers = User::where('status', 'aktif')->count();
-        $files = FileOrganisasi::all();
-        $logs = LogSuperadmin::all();
 
-        return view('dashboard.superadmin.index', compact('users', 'totalUsers', 'activeUsers', 'files', 'logs'));
+        return view('dashboard.superadmin.users', compact('users', 'totalUsers', 'activeUsers'));
     }
 
     public function fileIndex(Request $request)
     {
         $search = $request->get('search');
-        $kategori = $request->get('kategori');
-        $kategoriLabels = config('file-pemilah.labels');
+        $type = $request->get('type');
+        $sort = $request->get('sort', 'date-desc');
 
         $allItems = collect();
+        $baseDir = storage_path('app');
 
-        // 1. FileOrganisasi records
-        $fileOrganisasi = FileOrganisasi::with('uploadedBy')
-            ->when($kategori, function ($q, $k) {
-                return $q->where('kategori', $k);
-            })
-            ->get()
-            ->map(function ($f) use ($kategoriLabels) {
-                $media = $f->getFirstMedia('uploads');
-                $kB = $kategoriLabels[$f->kategori] ?? ucfirst($f->kategori);
-                $sClass = match ($f->status) {
-                    'aktif' => 'badge-success', 'diperiksa' => 'badge-warning',
-                    'arsip' => 'badge-info', 'dihapus' => 'badge-danger',
-                    default => 'badge-info',
-                };
-                $sLabel = match ($f->status) {
-                    'aktif' => 'Aktif', 'diperiksa' => 'Diperiksa',
-                    'arsip' => 'Arsip', 'dihapus' => 'Dihapus',
-                    default => $f->status,
-                };
-                return (object) [
-                    'source' => 'file_organisasi',
-                    'source_label' => 'File Organisasi',
-                    'nama_file' => $f->nama_file,
-                    'kategori' => $f->kategori,
-                    'kategori_label' => $kB,
-                    'kategori_badge' => config("file-pemilah.badge_classes.{$f->kategori}", 'badge-info'),
-                    'status' => $f->status,
-                    'status_badge' => $sClass,
-                    'status_label' => $sLabel,
-                    'uploader_nama' => $f->uploadedBy?->nama ?? 'Tidak diketahui',
-                    'created_at' => $f->created_at,
-                    'size' => $media?->size ?? 0,
-                    'mime_type' => $media?->mime_type ?? '-',
-                    'media_id' => $media?->id,
-                    'download_url' => route('superadmin.file.download', $f->id),
-                    'id' => $f->id,
-                ];
-            });
+        // Scan storage/app recursively, exclude whatsapp-sidecar
+        $this->scanDirectory($baseDir, $allItems, $search, $type);
 
-        $allItems = $allItems->merge($fileOrganisasi);
-
-        // 2. Media from other models (exclude FileOrganisasi's own media)
-        if (!$kategori || $kategori === 'media') {
-            $mediaQuery = Media::where('model_type', '!=', FileOrganisasi::class);
-            if ($kategori !== 'media') {
-                // no kategori filter needed — media records are always shown unless filtered to a non-media category
-            }
-            $mediaRecords = $mediaQuery->get()->map(function ($m) {
-                $uploaderName = 'Tidak diketahui';
-
-                // 1. Check custom_properties from newer uploads
-                $cpUploadedBy = $m->custom_properties['uploaded_by'] ?? null;
-                if ($cpUploadedBy) {
-                    $uploader = User::find($cpUploadedBy);
-                    $uploaderName = $uploader?->nama ?? 'Tidak diketahui';
-                } else {
-                    // 2. Fallback: resolve from parent model (for legacy uploads)
-                    try {
-                        $parent = $m->model_type::find($m->model_id);
-                        if ($parent && method_exists($parent, 'uploadedBy')) {
-                            $uploaderName = $parent->uploadedBy?->nama ?? 'Tidak diketahui';
-                        } elseif ($parent && method_exists($parent, 'createdBy')) {
-                            $uploaderName = $parent->createdBy?->nama ?? 'Tidak diketahui';
-                        } elseif ($parent && isset($parent->uploaded_by)) {
-                            $uploaderName = User::find($parent->uploaded_by)?->nama ?? 'Tidak diketahui';
-                        } elseif ($parent && isset($parent->created_by)) {
-                            $uploaderName = User::find($parent->created_by)?->nama ?? 'Tidak diketahui';
-                        }
-                    } catch (\Throwable $e) {
-                        $uploaderName = 'Tidak diketahui';
-                    }
-                }
-
-                $modelShort = class_basename($m->model_type);
-
-                return (object) [
-                    'source' => 'media',
-                    'source_label' => $modelShort . ' (' . $m->collection_name . ')',
-                    'nama_file' => $m->file_name,
-                    'kategori' => 'media',
-                    'kategori_label' => $modelShort,
-                    'kategori_badge' => 'badge-info',
-                    'status' => '-',
-                    'status_badge' => 'badge-info',
-                    'status_label' => '-',
-                    'uploader_nama' => $uploaderName,
-                    'created_at' => $m->created_at,
-                    'size' => $m->size ?? 0,
-                    'mime_type' => $m->mime_type ?? '-',
-                    'media_id' => $m->id,
-                    'download_url' => route('media.download', $m->id),
-                    'id' => $m->id,
-                ];
-            });
-            $allItems = $allItems->merge($mediaRecords);
-        }
-
-        // Search filter
-        if ($search) {
-            $allItems = $allItems->filter(function ($item) use ($search) {
-                return stripos($item->nama_file, $search) !== false
-                    || stripos($item->uploader_nama, $search) !== false;
-            })->values();
-        }
-
-        // Sort by created_at desc
-        $allItems = $allItems->sortByDesc(function ($item) {
-            return $item->created_at?->timestamp ?? 0;
-        })->values();
+        // Sort
+        $allItems = match ($sort) {
+            'date-asc' => $allItems->sortBy('created_at')->values(),
+            'size-desc' => $allItems->sortByDesc('size')->values(),
+            'size-asc' => $allItems->sortBy('size')->values(),
+            'name-asc' => $allItems->sortBy('nama_file')->values(),
+            default => $allItems->sortByDesc('created_at')->values(),
+        };
 
         // Manual pagination
-        $perPage = 20;
+        $perPage = 10;
         $page = Paginator::resolveCurrentPage();
         $total = $allItems->count();
         $items = $allItems->forPage($page, $perPage);
@@ -164,12 +118,95 @@ class SuperAdminController extends Controller
             ['path' => Paginator::resolveCurrentPath(), 'query' => $request->query()]
         );
 
-        return view('dashboard.superadmin.file', compact('files', 'kategoriLabels'));
+        // Storage stats
+        $totalSize = $allItems->sum('size');
+        $totalFiles = $allItems->count();
+
+        return view('dashboard.superadmin.file', compact('files', 'totalSize', 'totalFiles'));
+    }
+
+    private function scanDirectory($directory, &$items, $search = null, $type = null)
+    {
+        $excludedFolders = ['whatsapp-sidecar'];
+        $baseAppDir = storage_path('app');
+
+        if (!is_dir($directory)) {
+            return;
+        }
+
+        $scanDir = function ($currentDir) use (&$scanDir, &$items, $search, $type, $excludedFolders, $baseAppDir) {
+            $handle = opendir($currentDir);
+            if (!$handle) return;
+
+            while (($entry = readdir($handle)) !== false) {
+                if ($entry === '.' || $entry === '..') continue;
+
+                $fullPath = $currentDir . DIRECTORY_SEPARATOR . $entry;
+
+                if (is_dir($fullPath)) {
+                    // Skip excluded folders
+                    if (in_array($entry, $excludedFolders)) continue;
+                    // Skip hidden folders
+                    if (str_starts_with($entry, '.')) continue;
+                    $scanDir($fullPath);
+                } elseif (is_file($fullPath)) {
+                    $fileName = basename($fullPath);
+                    $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                    $size = filesize($fullPath);
+                    $lastModified = filemtime($fullPath);
+
+                    // Skip hidden files
+                    if (str_starts_with($fileName, '.')) continue;
+
+                    // Filter by type
+                    if ($type) {
+                        $fileType = $this->getFileType($extension);
+                        if ($fileType !== $type) continue;
+                    }
+
+                    // Filter by search
+                    if ($search && stripos($fileName, $search) === false) continue;
+
+                    // Get relative path from storage/app
+                    $relativePath = str_replace($baseAppDir . DIRECTORY_SEPARATOR, '', $fullPath);
+                    $relativePath = str_replace('\\', '/', $relativePath);
+
+                    $items->push((object) [
+                        'id' => md5($fullPath),
+                        'nama_file' => $fileName,
+                        'file_path' => $relativePath,
+                        'kategori' => $this->getFileType($extension),
+                        'size' => $size,
+                        'mime_type' => mime_content_type($fullPath) ?: 'application/octet-stream',
+                        'created_at' => now()->setTimestamp($lastModified),
+                        'extension' => $extension,
+                    ]);
+                }
+            }
+            closedir($handle);
+        };
+
+        $scanDir($directory);
+    }
+
+    private function getFileType($extension)
+    {
+        return match (true) {
+            in_array($extension, ['pdf']) => 'pdf',
+            in_array($extension, ['doc', 'docx', 'txt', 'rtf']) => 'doc',
+            in_array($extension, ['xls', 'xlsx', 'csv']) => 'xls',
+            in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp']) => 'img',
+            in_array($extension, ['mp4', 'avi', 'mov', 'wmv', 'mkv']) => 'vid',
+            in_array($extension, ['zip', 'rar', '7z', 'tar', 'gz']) => 'zip',
+            default => 'lainnya',
+        };
     }
 
     public function logIndex(Request $request)
     {
         $search = $request->get('search');
+        $action = $request->get('action');
+        $time = $request->get('time');
 
         $logs = LogSuperadmin::with('user')
             ->when($search, function ($query, $search) {
@@ -182,11 +219,31 @@ class SuperAdminController extends Controller
                       });
                 });
             })
+            ->when($action, function ($query, $action) {
+                return $query->where('aksi', $action);
+            })
+            ->when($time, function ($query, $time) {
+                return match ($time) {
+                    'today' => $query->whereDate('created_at', today()),
+                    'yesterday' => $query->whereDate('created_at', today()->subDay()),
+                    'week' => $query->where('created_at', '>=', now()->subDays(7)),
+                    default => $query,
+                };
+            })
             ->orderBy('created_at', 'desc')
-            ->paginate(20)
+            ->paginate(10)
             ->withQueryString();
 
-        return view('dashboard.superadmin.log', compact('logs'));
+        // Log stats
+        $totalLogs = LogSuperadmin::count();
+        $loginLogs = LogSuperadmin::where('aksi', 'login')->count();
+        $uploadDownloadLogs = LogSuperadmin::whereIn('aksi', ['upload', 'download'])->count();
+        $adminActionLogs = LogSuperadmin::whereIn('aksi', ['create', 'update', 'delete'])->count();
+        $securityLogs = LogSuperadmin::whereIn('aksi', ['login_failed', 'unauthorized'])->count();
+
+        return view('dashboard.superadmin.log', compact(
+            'logs', 'totalLogs', 'loginLogs', 'uploadDownloadLogs', 'adminActionLogs', 'securityLogs'
+        ));
     }
 
     public function uploadFile(Request $request)
