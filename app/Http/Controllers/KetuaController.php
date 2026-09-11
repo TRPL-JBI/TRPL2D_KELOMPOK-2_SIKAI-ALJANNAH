@@ -7,6 +7,7 @@ use App\Models\AsetKendaraan;
 use App\Models\KategoriPemasukan;
 use App\Models\KategoriPengeluaran;
 use App\Models\LogAktivitas;
+use App\Models\LogSuperadmin;
 use App\Models\Pemasukan;
 use App\Models\Pengeluaran;
 use App\Models\PermintaanIzin;
@@ -43,7 +44,26 @@ class KetuaController extends Controller
             $chartPengeluaran[] = (int) ($monthlyPengeluaran[$b] ?? 0);
         }
 
-        $activities = LogAktivitas::with('user')->latest()->take(5)->get();
+        $logAktivitas = collect(LogAktivitas::with('user')->latest()->take(5)->get()->map(fn ($l) => (object) [
+            'deskripsi' => $l->deskripsi,
+            'user_nama' => $l->user?->nama ?? 'Sistem',
+            'created_at' => $l->created_at,
+            'modul' => $l->modul,
+            'source' => 'log_aktivitas',
+        ]));
+
+        $logSuperadmin = collect(LogSuperadmin::with('user')->latest()->take(5)->get()->map(fn ($l) => (object) [
+            'deskripsi' => $l->deskripsi,
+            'user_nama' => $l->user?->nama ?? 'Sistem',
+            'created_at' => $l->created_at,
+            'modul' => $l->modul,
+            'source' => 'log_superadmin',
+        ]));
+
+        $activities = $logAktivitas->merge($logSuperadmin)
+            ->sortByDesc('created_at')
+            ->take(5)
+            ->values();
 
         $requests = PermintaanIzin::with('user')->where('status', 'menunggu')->latest()->take(5)->get();
 
@@ -117,12 +137,78 @@ class KetuaController extends Controller
 
     public function log(Request $request)
     {
-        $logs = LogAktivitas::with('user')
-            ->when($request->search, fn ($q, $s) => $q->where('deskripsi', 'like', "%{$s}%"))
-            ->latest()
-            ->paginate(20);
+        $search = $request->search;
+        $filterRole = $request->role;
+        $filterModul = $request->modul;
+        $filterWaktu = $request->waktu;
 
-        return view('dashboard.ketua.log', compact('logs'));
+        $logAktivitas = collect(LogAktivitas::with('user')
+            ->when($search, fn ($q, $s) => $q->where('deskripsi', 'like', "%{$s}%"))
+            ->get()
+            ->map(fn ($l) => (object) [
+                'id' => $l->id,
+                'deskripsi' => $l->deskripsi,
+                'modul' => $l->modul,
+                'aksi' => $l->aksi,
+                'user_nama' => $l->user?->nama ?? 'Sistem',
+                'user_role' => $l->user?->role ?? '-',
+                'created_at' => $l->created_at,
+                'source' => 'aktivitas',
+            ]));
+
+        $logSuperadmin = collect(LogSuperadmin::with('user')
+            ->when($search, fn ($q, $s) => $q->where('deskripsi', 'like', "%{$s}%"))
+            ->get()
+            ->map(fn ($l) => (object) [
+                'id' => $l->id,
+                'deskripsi' => $l->deskripsi,
+                'modul' => $l->modul,
+                'aksi' => $l->aksi,
+                'user_nama' => $l->user?->nama ?? 'Sistem',
+                'user_role' => $l->user?->role ?? '-',
+                'created_at' => $l->created_at,
+                'source' => 'superadmin',
+            ]));
+
+        $merged = $logAktivitas->merge($logSuperadmin);
+
+        if ($filterRole) {
+            $merged = $merged->filter(fn ($l) => $l->user_role === $filterRole);
+        }
+
+        if ($filterModul) {
+            $merged = $merged->filter(fn ($l) => $l->modul === $filterModul);
+        }
+
+        if ($filterWaktu) {
+            $now = now();
+            $merged = $merged->filter(fn ($l) => match ($filterWaktu) {
+                'hari' => $l->created_at->isToday(),
+                'kemarin' => $l->created_at->isYesterday(),
+                '7_hari' => $l->created_at->gte($now->copy()->subDays(7)),
+                '30_hari' => $l->created_at->gte($now->copy()->subDays(30)),
+                default => true,
+            });
+        }
+
+        $merged = $merged->sortByDesc('created_at')->values();
+
+        $page = (int) $request->get('page', 1);
+        $perPage = 20;
+        $total = $merged->count();
+        $logs = $merged->slice(($page - 1) * $perPage, $perPage)->values();
+
+        $logs = new \Illuminate\Pagination\LengthAwarePaginator(
+            $logs,
+            $total,
+            $perPage,
+            $page,
+            ['path' => route('ketua.log'), 'pageName' => 'page']
+        );
+
+        $modulList = $logAktivitas->merge($logSuperadmin)->pluck('modul')->filter()->unique()->sort()->values();
+
+        return view('dashboard.ketua.log', compact('logs', 'modulList'));
     }
 
     public function izin()
