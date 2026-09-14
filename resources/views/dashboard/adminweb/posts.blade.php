@@ -207,6 +207,122 @@
         color: #fff;
     }
 
+    .btn-action-share {
+        background-color: #25d366;
+        color: #fff;
+    }
+
+    /* Share Modal */
+    .share-modal-overlay {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.45); opacity: 0; visibility: hidden;
+        transition: opacity .25s, visibility .25s;
+    }
+    .share-modal-overlay.active { opacity: 1; visibility: visible; }
+    .share-modal-box {
+        background: #fff; border-radius: 16px; width: 90%; max-width: 500px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.25); overflow: hidden;
+    }
+    .share-modal-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 18px 22px; border-bottom: 1px solid #efefef;
+    }
+    .share-modal-header h3 { font-size: 17px; font-weight: 700; color: #16423c; margin: 0; }
+    .share-modal-close {
+        background: none; border: none; font-size: 22px; cursor: pointer; color: #828282; padding: 0 4px;
+    }
+    .share-modal-body { padding: 22px; }
+    .share-option {
+        display: flex; align-items: center; gap: 16px; padding: 16px;
+        border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer;
+        transition: border-color .2s, background .2s; margin-bottom: 12px;
+    }
+    .share-option:last-child { margin-bottom: 0; }
+    .share-option:hover { border-color: #25d366; background: #f0fdf4; }
+    .share-option-icon {
+        width: 48px; height: 48px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .share-option-icon.link { background: #e0e7ff; color: #4f46e5; }
+    .share-option-icon.wa { background: #dcfce7; color: #16a34a; }
+    .share-option-text h4 { font-size: 14px; font-weight: 600; color: #1f2937; margin: 0 0 2px; }
+    .share-option-text p { font-size: 12px; color: #6b7280; margin: 0; }
+
+    /* Member list */
+    .member-select-header {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 12px;
+    }
+    .member-select-header label { font-size: 13px; font-weight: 600; color: #374151; }
+    .member-select-header .count { font-size: 12px; color: #6b7280; }
+    .member-search {
+        width: 100%; padding: 9px 14px; border: 1.5px solid #d1d5db; border-radius: 10px;
+        font-size: 13px; font-family: inherit; outline: none; margin-bottom: 10px;
+    }
+    .member-search:focus { border-color: #25d366; }
+    .member-list {
+        max-height: 280px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 10px;
+    }
+    .member-item {
+        display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+        border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background .15s;
+    }
+    .member-item:last-child { border-bottom: none; }
+    .member-item:hover { background: #f9fafb; }
+    .member-item input[type="checkbox"] { accent-color: #25d366; width: 16px; height: 16px; cursor: pointer; }
+    .member-info { flex: 1; min-width: 0; }
+    .member-name { font-size: 13px; font-weight: 600; color: #1f2937; }
+    .member-phone { font-size: 11px; color: #6b7280; }
+    .share-footer { padding: 16px 22px; border-top: 1px solid #efefef; display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-share-cancel {
+        padding: 9px 20px; border: 1.5px solid #d1d5db; border-radius: 10px;
+        background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .btn-share-send {
+        padding: 9px 20px; border: none; border-radius: 10px;
+        background: #25d366; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+        font-family: inherit; transition: opacity .2s;
+    }
+    .btn-share-send:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-share-send:hover:not(:disabled) { opacity: 0.85; }
+    .btn-share-copy {
+        padding: 9px 20px; border: none; border-radius: 10px;
+        background: #4f46e5; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+        font-family: inherit; transition: opacity .2s; width: 100%;
+    }
+    .btn-share-copy:hover { opacity: 0.85; }
+    .copy-link-box {
+        display: flex; gap: 8px; align-items: center; margin-bottom: 16px;
+    }
+    .copy-link-input {
+        flex: 1; padding: 9px 14px; border: 1.5px solid #d1d5db; border-radius: 10px;
+        font-size: 13px; font-family: inherit; color: #374151; background: #f9fafb; outline: none;
+    }
+    .btn-copy-link {
+        padding: 9px 16px; border: none; border-radius: 10px;
+        background: #4f46e5; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+        font-family: inherit; white-space: nowrap; transition: background .2s;
+    }
+    .btn-copy-link:hover { background: #4338ca; }
+    .share-step { display: none; }
+    .share-step.active { display: block; }
+    .share-back {
+        background: none; border: none; cursor: pointer; color: #6b7280; padding: 0;
+        display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; margin-bottom: 14px;
+    }
+    .share-back:hover { color: #16423c; }
+    .share-loading {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        padding: 30px; color: #6b7280; font-size: 13px;
+    }
+    .share-toast {
+        position: fixed; top: 20px; right: 20px; z-index: 99999;
+        background: #d8efdd; border: 1px solid #35ab50; border-radius: 12px;
+        padding: 12px 18px; display: none; align-items: center; gap: 8px;
+        font-size: 13px; color: #154420; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
     @media (max-width: 768px) {
         .posts-search {
             width: 100%;
@@ -271,6 +387,10 @@
                 </td>
                 <td>
                     <div class="posts-actions">
+                        <button type="button" class="btn-action btn-action-share" onclick="openShareModal({{ $post->id }}, '{{ addslashes($post->title) }}', '{{ url('/berita/' . $post->slug) }}')">
+                            <span class="material-icons" style="font-size:14px;">share</span>
+                            Share
+                        </button>
                         <a href="{{ route('adminweb.posts.edit', $post->id) }}" class="btn-action btn-action-edit">
                             <span class="material-icons" style="font-size:14px;">edit</span>
                             Edit
@@ -358,9 +478,210 @@
 </script>
 @endif
 
+<!-- Share Modal -->
+<div class="share-modal-overlay" id="modalShare">
+    <div class="share-modal-box">
+        <!-- Step 1: Choose -->
+        <div class="share-step active" id="shareStepChoose">
+            <div class="share-modal-header">
+                <h3>Bagikan Postingan</h3>
+                <button class="share-modal-close" onclick="closeShareModal()">&times;</button>
+            </div>
+            <div class="share-modal-body">
+                <div class="share-option" onclick="showCopyLink()">
+                    <div class="share-option-icon link"><span class="material-icons">link</span></div>
+                    <div class="share-option-text"><h4>Salin Link</h4><p>Salin URL postingan ke clipboard</p></div>
+                </div>
+                <div class="share-option" onclick="showWAStep()">
+                    <div class="share-option-icon wa"><span class="material-icons">chat</span></div>
+                    <div class="share-option-text"><h4>WhatsApp Blast</h4><p>Kirim link ke nomor anggota</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Copy Link -->
+        <div class="share-step" id="shareStepLink">
+            <div class="share-modal-header">
+                <h3>Salin Link</h3>
+                <button class="share-modal-close" onclick="closeShareModal()">&times;</button>
+            </div>
+            <div class="share-modal-body">
+                <button class="share-back" onclick="backToShareChoose()"><span class="material-icons" style="font-size:18px;">arrow_back</span> Kembali</button>
+                <div class="copy-link-box">
+                    <input type="text" id="copyLinkInput" class="copy-link-input" readonly>
+                    <button class="btn-copy-link" onclick="copyPostLink()">Salin</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: WhatsApp Blast -->
+        <div class="share-step" id="shareStepWA">
+            <div class="share-modal-header">
+                <h3>WhatsApp Blast</h3>
+                <button class="share-modal-close" onclick="closeShareModal()">&times;</button>
+            </div>
+            <div class="share-modal-body">
+                <button class="share-back" onclick="backToShareChoose()"><span class="material-icons" style="font-size:18px;">arrow_back</span> Kembali</button>
+                <div class="member-select-header">
+                    <label>Pilih Anggota</label>
+                    <span class="count" id="memberCount">0 / 0 dipilih</span>
+                </div>
+                <input type="text" class="member-search" id="memberSearch" placeholder="Cari nama atau nomor..." oninput="renderMembers(allMembers)">
+                <div style="padding:8px 14px;border-bottom:1px solid #f3f4f6;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;">
+                        <input type="checkbox" onchange="toggleAllMembers(this)" style="accent-color:#25d366;width:15px;height:15px;"> Pilih Semua
+                    </label>
+                </div>
+                <div class="member-list" id="memberList"></div>
+            </div>
+            <div class="share-footer">
+                <button class="btn-share-cancel" onclick="closeShareModal()">Batal</button>
+                <button class="btn-share-send" id="btnSendWA" disabled onclick="sendWABlast()">Kirim WhatsApp</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Share Toast -->
+<div class="share-toast" id="shareToast">
+    <span class="material-icons" style="color:#35ab50;font-size:18px;">check_circle</span>
+    <span></span>
+</div>
+
+<script>
+    function backToShareChoose() {
+        document.getElementById('shareStepLink').classList.remove('active');
+        document.getElementById('shareStepWA').classList.remove('active');
+        document.getElementById('shareStepChoose').classList.add('active');
+    }
+</script>
+
 <script>
     document.getElementById('modalKategori').addEventListener('click', function(e) {
         if (e.target === this) this.classList.remove('active');
     });
+
+    // ── Share Post Logic ──
+    var sharePostId = null, sharePostTitle = '', sharePostUrl = '';
+
+    function openShareModal(id, title, url) {
+        sharePostId = id; sharePostTitle = title; sharePostUrl = url;
+        document.getElementById('shareStepChoose').classList.add('active');
+        document.getElementById('shareStepLink').classList.remove('active');
+        document.getElementById('shareStepWA').classList.remove('active');
+        document.getElementById('modalShare').classList.add('active');
+    }
+    function closeShareModal() {
+        document.getElementById('modalShare').classList.remove('active');
+        sharePostId = null;
+    }
+
+    // Copy link
+    function showCopyLink() {
+        document.getElementById('shareStepChoose').classList.remove('active');
+        document.getElementById('shareStepLink').classList.add('active');
+        document.getElementById('copyLinkInput').value = sharePostUrl;
+    }
+    function copyPostLink() {
+        var inp = document.getElementById('copyLinkInput');
+        inp.select();
+        navigator.clipboard.writeText(inp.value).then(function() {
+            showShareToast('Link berhasil disalin!');
+            closeShareModal();
+        }).catch(function() {
+            document.execCommand('copy');
+            showShareToast('Link berhasil disalin!');
+            closeShareModal();
+        });
+    }
+
+    // WhatsApp Blast
+    var allMembers = [];
+    function showWAStep() {
+        document.getElementById('shareStepChoose').classList.remove('active');
+        document.getElementById('shareStepWA').classList.add('active');
+        document.getElementById('memberList').innerHTML = '<div class="share-loading"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Memuat data anggota...</div>';
+        document.getElementById('modalShare').classList.add('active');
+
+        if (allMembers.length) { renderMembers(allMembers); return; }
+        fetch('{{ route("adminweb.posts.members") }}')
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.success) { allMembers = res.data; renderMembers(allMembers); }
+                else { document.getElementById('memberList').innerHTML = '<div class="share-loading">Gagal memuat data</div>'; }
+            })
+            .catch(function() { document.getElementById('memberList').innerHTML = '<div class="share-loading">Gagal memuat data</div>'; });
+    }
+
+    function renderMembers(members) {
+        var search = (document.getElementById('memberSearch')?.value || '').toLowerCase();
+        var filtered = members.filter(function(m) {
+            return m.nama.toLowerCase().includes(search) || m.telepon.includes(search);
+        });
+        var html = '';
+        filtered.forEach(function(m) {
+            html += '<label class="member-item"><input type="checkbox" value="' + m.id + '" class="member-cb"><div class="member-info"><div class="member-name">' + m.nama + '</div><div class="member-phone">' + m.telepon + '</div></div></label>';
+        });
+        if (!filtered.length) html = '<div class="share-loading">Tidak ada anggota ditemukan</div>';
+        document.getElementById('memberList').innerHTML = html;
+        updateMemberCount();
+    }
+
+    function toggleAllMembers(cb) {
+        document.querySelectorAll('.member-cb').forEach(function(c) { c.checked = cb.checked; });
+        updateMemberCount();
+    }
+    function updateMemberCount() {
+        var total = document.querySelectorAll('.member-cb').length;
+        var checked = document.querySelectorAll('.member-cb:checked').length;
+        document.getElementById('memberCount').textContent = checked + ' / ' + total + ' dipilih';
+        document.getElementById('btnSendWA').disabled = checked === 0;
+    }
+
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('member-cb')) updateMemberCount();
+    });
+
+    function sendWABlast() {
+        var ids = [];
+        document.querySelectorAll('.member-cb:checked').forEach(function(c) { ids.push(parseInt(c.value)); });
+        if (!ids.length) return;
+
+        var btn = document.getElementById('btnSendWA');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">sync</span> Mengirim...';
+
+        fetch('/adminweb/posts/' + sharePostId + '/share-whatsapp', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ member_ids: ids })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            closeShareModal();
+            showShareToast(res.message || 'Selesai');
+            btn.disabled = false;
+            btn.innerHTML = 'Kirim WhatsApp';
+        })
+        .catch(function(e) {
+            closeShareModal();
+            showShareToast('Gagal mengirim: ' + e.message);
+            btn.disabled = false;
+            btn.innerHTML = 'Kirim WhatsApp';
+        });
+    }
+
+    function showShareToast(msg) {
+        var t = document.getElementById('shareToast');
+        t.querySelector('span:last-child').textContent = msg;
+        t.style.display = 'flex';
+        setTimeout(function() { t.style.display = 'none'; }, 3500);
+    }
+
+    // Close on backdrop click
+    document.getElementById('modalShare').addEventListener('click', function(e) {
+        if (e.target === this) closeShareModal();
+    });
 </script>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 @endsection

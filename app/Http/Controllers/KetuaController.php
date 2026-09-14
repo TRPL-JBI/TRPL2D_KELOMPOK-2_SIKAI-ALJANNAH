@@ -142,57 +142,57 @@ class KetuaController extends Controller
         $filterModul = $request->modul;
         $filterWaktu = $request->waktu;
 
-        $logAktivitas = collect(LogAktivitas::with('user')
-            ->when($search, fn ($q, $s) => $q->where('deskripsi', 'like', "%{$s}%"))
-            ->get()
-            ->map(fn ($l) => (object) [
-                'id' => $l->id,
-                'deskripsi' => $l->deskripsi,
-                'modul' => $l->modul,
-                'aksi' => $l->aksi,
-                'user_nama' => $l->user?->nama ?? 'Sistem',
-                'user_role' => $l->user?->role ?? '-',
-                'created_at' => $l->created_at,
-                'source' => 'aktivitas',
-            ]));
+        // Apply filters at DB level for both sources
+        $applyFilters = function ($query, $table) use ($search, $filterRole, $filterModul, $filterWaktu) {
+            $query->join('users', 'users.id', '=', "{$table}.user_id");
 
-        $logSuperadmin = collect(LogSuperadmin::with('user')
-            ->when($search, fn ($q, $s) => $q->where('deskripsi', 'like', "%{$s}%"))
-            ->get()
-            ->map(fn ($l) => (object) [
-                'id' => $l->id,
-                'deskripsi' => $l->deskripsi,
-                'modul' => $l->modul,
-                'aksi' => $l->aksi,
-                'user_nama' => $l->user?->nama ?? 'Sistem',
-                'user_role' => $l->user?->role ?? '-',
-                'created_at' => $l->created_at,
-                'source' => 'superadmin',
-            ]));
+            if ($search) {
+                $query->where(function ($w) use ($search, $table) {
+                    $w->where("{$table}.deskripsi", 'like', "%{$search}%")
+                      ->orWhere('users.nama', 'like', "%{$search}%")
+                      ->orWhere("{$table}.modul", 'like', "%{$search}%");
+                });
+            }
 
-        $merged = $logAktivitas->merge($logSuperadmin);
+            if ($filterRole) {
+                $query->where('users.role', $filterRole);
+            }
 
-        if ($filterRole) {
-            $merged = $merged->filter(fn ($l) => $l->user_role === $filterRole);
-        }
+            if ($filterModul) {
+                $query->where("{$table}.modul", $filterModul);
+            }
 
-        if ($filterModul) {
-            $merged = $merged->filter(fn ($l) => $l->modul === $filterModul);
-        }
+            if ($filterWaktu) {
+                $query->where(function ($w) use ($filterWaktu) {
+                    $w->when($filterWaktu === 'hari', fn ($q) => $q->whereDate('created_at', now()->toDateString()))
+                      ->when($filterWaktu === 'kemarin', fn ($q) => $q->whereDate('created_at', now()->subDay()->toDateString()))
+                      ->when($filterWaktu === '7_hari', fn ($q) => $q->where('created_at', '>=', now()->subDays(7)))
+                      ->when($filterWaktu === '30_hari', fn ($q) => $q->where('created_at', '>=', now()->subDays(30)));
+                });
+            }
+        };
 
-        if ($filterWaktu) {
-            $now = now();
-            $merged = $merged->filter(fn ($l) => match ($filterWaktu) {
-                'hari' => $l->created_at->isToday(),
-                'kemarin' => $l->created_at->isYesterday(),
-                '7_hari' => $l->created_at->gte($now->copy()->subDays(7)),
-                '30_hari' => $l->created_at->gte($now->copy()->subDays(30)),
-                default => true,
-            });
-        }
+        // Query log_aktivitas with filters
+        $queryAktivitas = \Illuminate\Support\Facades\DB::table('log_aktivitas')
+            ->select('log_aktivitas.*', 'users.nama as user_nama', 'users.role as user_role')
+            ->selectRaw("'aktivitas' as source");
+        $applyFilters($queryAktivitas, 'log_aktivitas');
+        $logAktivitas = collect($queryAktivitas->get());
 
-        $merged = $merged->sortByDesc('created_at')->values();
+        // Query log_superadmin with filters
+        $querySuperadmin = \Illuminate\Support\Facades\DB::table('log_superadmin')
+            ->select('log_superadmin.*', 'users.nama as user_nama', 'users.role as user_role')
+            ->selectRaw("'superadmin' as source");
+        $applyFilters($querySuperadmin, 'log_superadmin');
+        $logSuperadmin = collect($querySuperadmin->get());
 
+        // Merge, parse dates, and sort
+        $merged = $logAktivitas->merge($logSuperadmin)
+            ->map(fn ($l) => tap($l, fn ($o) => $o->created_at = \Carbon\Carbon::parse($o->created_at)))
+            ->sortByDesc('created_at')
+            ->values();
+
+        // Paginate
         $page = (int) $request->get('page', 1);
         $perPage = 20;
         $total = $merged->count();
@@ -203,10 +203,22 @@ class KetuaController extends Controller
             $total,
             $perPage,
             $page,
-            ['path' => route('ketua.log'), 'pageName' => 'page']
+            [
+                'path' => route('ketua.log'),
+                'pageName' => 'page',
+                'query' => $request->query(),
+            ]
         );
 
-        $modulList = $logAktivitas->merge($logSuperadmin)->pluck('modul')->filter()->unique()->sort()->values();
+        // Modul list from unfiltered data
+        $modulList = \Illuminate\Support\Facades\DB::table('log_aktivitas')
+            ->select('modul')
+            ->union(\Illuminate\Support\Facades\DB::table('log_superadmin')->select('modul'))
+            ->pluck('modul')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
 
         return view('dashboard.ketua.log', compact('logs', 'modulList'));
     }

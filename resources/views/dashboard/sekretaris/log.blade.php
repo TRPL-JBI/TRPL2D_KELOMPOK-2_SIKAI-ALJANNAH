@@ -22,72 +22,126 @@
     ];
 @endphp
 
+@push('styles')
+<style>
+    body { background-color: #dcfce7; }
+    .sidebar { background-color: #0d4f46 !important; }
+    .content-wrapper { padding: 28px 32px; }
+    .sk-top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+    .sk-page-title { font-size: 24px; font-weight: 700; color: #1f5c52; margin: 0; }
+    .sk-card { background: #fff; border-radius: 16px; border: 1px solid #1f5c52; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
+    .sk-card-header { background: #1f5c52; padding: 14px 22px; }
+    .sk-card-header h2 { font-size: 15px; font-weight: 600; color: #fff; margin: 0; }
+    .sk-card-body { padding: 18px 22px; }
+    .sk-search-box { display: flex; align-items: center; gap: 8px; border: 1px solid #d1d5db; border-radius: 24px; padding: 8px 16px; background: #fff; max-width: 360px; transition: border-color 0.2s; }
+    .sk-search-box:focus-within { border-color: #1f5c52; }
+    .sk-search-box .material-icons { font-size: 18px; color: #9ca3af; }
+    .sk-search-box input { border: none; outline: none; font-size: 13px; font-family: 'Poppins', sans-serif; color: #374151; width: 100%; background: transparent; }
+    .sk-search-box input::placeholder { color: #9ca3af; }
+    .sk-table-wrap { overflow-x: auto; }
+    .sk-table { width: 100%; border-collapse: collapse; }
+    .sk-table thead th { padding: 11px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; border-bottom: 2px solid #e5e7eb; background: #f9fafb; white-space: nowrap; }
+    .sk-table tbody td { padding: 12px 16px; font-size: 12px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    .sk-table tbody tr:last-child td { border-bottom: none; }
+    .sk-table tbody tr:hover { background: #f9fafb; }
+    .sk-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .sk-badge-create { background: #d1fae5; color: #065f46; }
+    .sk-badge-update { background: #dbeafe; color: #1e40af; }
+    .sk-badge-delete { background: #fee2e2; color: #991b1b; }
+    .sk-badge-import { background: #ede9fe; color: #5b21b6; }
+    .sk-badge-login { background: #d1fae5; color: #065f46; }
+    .sk-badge-logout { background: #f3f4f6; color: #374151; }
+    .sk-badge-verify { background: #dbeafe; color: #1e40af; }
+    .sk-badge-approve { background: #d1fae5; color: #065f46; }
+    .sk-badge-reject { background: #fee2e2; color: #991b1b; }
+    .sk-badge-default { background: #f3f4f6; color: #374151; }
+    .sk-pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 20px; }
+    .sk-pagination a, .sk-pagination span { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600; font-family: 'Poppins', sans-serif; text-decoration: none; transition: all 0.2s; }
+    .sk-pagination a { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+    .sk-pagination a:hover { background: #f0fdf4; border-color: #1f5c52; color: #1f5c52; }
+    .sk-pagination span.current { background: #1f5c52; color: #fff; border: 1px solid #1f5c52; }
+    .sk-pagination span.disabled { background: #f9fafb; color: #d1d5db; border: 1px solid #e5e7eb; cursor: not-allowed; }
+    @media (max-width: 768px) { .sk-top-row { flex-direction: column; gap: 12px; } .sk-search-box { max-width: 100%; } .content-wrapper { padding: 20px 16px; } }
+</style>
+@endpush
+
 @section('content')
-<div style="background-color: #dcfce7; min-height: 100vh; margin: -30px; padding: 30px; font-family: 'Inter', 'Poppins', sans-serif;">
-    <h1 style="color: var(--primary-900); font-weight: bold; margin-bottom: 20px; font-size: 24px;">Log Aktivitas</h1>
+<div class="sk-top-row">
+    <h1 class="sk-page-title">Log Aktivitas</h1>
+</div>
 
-    <div class="card" style="border: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); padding: 0; overflow: hidden; border-radius: 12px; background-color: white;">
-        <!-- Search Area -->
-        <div style="padding: 15px 20px; background-color: white; border-bottom: 1px solid #e5e7eb;">
-            <form id="logSearchForm" method="GET" action="{{ route('sekretaris.log') }}" style="display:flex;gap:8px;align-items:center;width:420px;">
-                <div style="position:relative;flex:1;">
-                    <span class="material-icons" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#4b5563;font-size:20px;">search</span>
-                    <input type="text" name="search" id="logSearchInput" placeholder="Cari aktivitas..." value="{{ $search ?? '' }}" style="width:100%;padding:8px 12px 8px 40px;background-color:#e5e7eb;border:1px solid #d1d5db;border-radius:10px;font-size:13px;outline:none;color:black;">
-                </div>
-                <button type="submit" style="padding:8px 16px;background:var(--primary-500);color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Cari</button>
-            </form>
-        </div>
-
-        <!-- Activity Header -->
-        <div style="background-color: var(--primary-500); padding: 10px 20px;">
-            <h2 style="color: white; font-size: 14px; font-weight: 700; margin: 0;">Activity</h2>
-        </div>
-
-        <!-- Activity List -->
-        <div style="padding: 0; background-color: #d1d5db;" id="activityList">
-            @forelse($activities as $activity)
-            @php
-                $icon = match ($activity->aksi) {
-                    'verifikasi' => ['name' => 'verified', 'color' => '#16423c'],
-                    'update' => ['name' => 'info', 'color' => '#2563eb'],
-                    'nonaktif' => ['name' => 'error', 'color' => '#b91c1c'],
-                    'aktif' => ['name' => 'check_circle', 'color' => '#16a34a'],
-                    default => ['name' => 'info', 'color' => '#6b7280'],
-                };
-            @endphp
-            <div class="activity-item" style="display: flex; align-items: flex-start; gap: 20px; padding: 15px 20px; border-bottom: 1px solid #9ca3af; background-color: #d1d5db;">
-                <div style="margin-top: 5px;">
-                    <span class="material-icons" style="font-size: 32px; color: {{ $icon['color'] }};">{{ $icon['name'] }}</span>
-                </div>
-                <div>
-                    <h3 style="font-size: 14px; font-weight: 800; color: black; margin: 0 0 4px 0;">{{ $activity->deskripsi }}</h3>
-                    <p style="font-size: 12px; font-weight: 600; color: #374151; margin: 0 0 2px 0;">{{ $activity->modul }}</p>
-                    <span style="font-size: 10px; color: #4b5563;">{{ $activity->created_at->format('d M Y H:i') }}</span>
-                </div>
+<div class="sk-card">
+    <div class="sk-card-header"><h2>Daftar Aktivitas</h2></div>
+    <div class="sk-card-body">
+        <form method="GET" action="{{ route('sekretaris.log') }}" style="margin-bottom: 18px;">
+            <div class="sk-search-box">
+                <span class="material-icons">search</span>
+                <input type="text" name="search" placeholder="Cari aktivitas..." value="{{ $search ?? '' }}">
             </div>
-            @empty
-            <div style="padding: 40px 20px; text-align: center; background-color: white;">
-                <span class="material-icons" style="font-size: 48px; color: #9ca3af;">history</span>
-                <p style="font-size: 14px; color: #6b7280; margin-top: 10px;">Belum ada aktivitas</p>
-            </div>
-            @endforelse
+        </form>
 
-            <!-- White Empty Space at Bottom -->
-            <div style="background-color: white; height: 350px;"></div>
+        <div class="sk-table-wrap">
+            <table class="sk-table">
+                <thead>
+                    <tr>
+                        <th>Waktu</th>
+                        <th>Aksi</th>
+                        <th>Modul</th>
+                        <th>Deskripsi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($activities as $activity)
+                        @php
+                            $aksi = strtolower($activity->aksi ?? '');
+                            $badgeClass = match(true) {
+                                str_contains($aksi, 'create') => 'sk-badge-create',
+                                str_contains($aksi, 'import') => 'sk-badge-import',
+                                str_contains($aksi, 'update') => 'sk-badge-update',
+                                str_contains($aksi, 'delete') => 'sk-badge-delete',
+                                str_contains($aksi, 'login') => 'sk-badge-login',
+                                str_contains($aksi, 'logout') => 'sk-badge-logout',
+                                str_contains($aksi, 'verif') => 'sk-badge-verify',
+                                str_contains($aksi, 'setuju') => 'sk-badge-approve',
+                                str_contains($aksi, 'tolak') => 'sk-badge-reject',
+                                default => 'sk-badge-default',
+                            };
+                            $aksiLabel = match($activity->aksi) {
+                                'create' => 'Dibuat',
+                                'update' => 'Diperbarui',
+                                'delete' => 'Dihapus',
+                                'import' => 'Import',
+                                'login' => 'Login',
+                                'logout' => 'Logout',
+                                'verifikasi' => 'Verifikasi',
+                                'setuju' => 'Disetujui',
+                                'tolak' => 'Ditolak',
+                                'nonaktif' => 'Dinonaktifkan',
+                                'aktif' => 'Diaktifkan',
+                                default => ucfirst(str_replace('_', ' ', $activity->aksi ?? '-')),
+                            };
+                        @endphp
+                        <tr>
+                            <td style="white-space:nowrap;">{{ $activity->created_at->format('d/m/Y H:i') }}</td>
+                            <td><span class="sk-badge {{ $badgeClass }}">{{ $aksiLabel }}</span></td>
+                            <td>{{ ucfirst(str_replace('_', ' ', $activity->modul ?? '-')) }}</td>
+                            <td>{{ $activity->deskripsi ?? '-' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" style="text-align:center;padding:48px 16px;color:#9ca3af;font-size:13px;">
+                                <span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">history</span>
+                                Belum ada aktivitas
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
+
+        @if($activities->hasPages())
+            <div class="sk-pagination">{{ $activities->links() }}</div>
+        @endif
     </div>
 </div>
-@endsection
-
-@section('scripts')
-<script>
-    // Auto submit log search form with debounce
-    let logSearchTimeout;
-    document.getElementById('logSearchInput').addEventListener('input', function() {
-        clearTimeout(logSearchTimeout);
-        logSearchTimeout = setTimeout(() => {
-            document.getElementById('logSearchForm').submit();
-        }, 500);
-    });
-</script>
 @endsection

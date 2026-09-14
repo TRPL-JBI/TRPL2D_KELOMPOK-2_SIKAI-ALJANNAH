@@ -427,4 +427,71 @@ class AdminWebController extends Controller
 
         return response()->json(['success' => true, 'message' => '"' . $name . '" berhasil dipulihkan.']);
     }
+
+    /**
+     * Get list of active members for WhatsApp Blast selection.
+     */
+    public function getMembers()
+    {
+        $members = \App\Models\Anggota::where('status', 'aktif')
+            ->whereNotNull('telepon')
+            ->where('telepon', '!=', '')
+            ->select('id', 'nama', 'telepon')
+            ->orderBy('nama')
+            ->get();
+
+        return response()->json(['success' => true, 'data' => $members]);
+    }
+
+    /**
+     * Send post link via WhatsApp to selected members.
+     */
+    public function shareWhatsApp(Request $request, $id)
+    {
+        $request->validate([
+            'member_ids' => 'required|array|min:1',
+            'member_ids.*' => 'exists:anggota,id',
+        ]);
+
+        $post = Post::findOrFail($id);
+        $members = \App\Models\Anggota::whereIn('id', $request->member_ids)
+            ->where('status', 'aktif')
+            ->whereNotNull('telepon')
+            ->where('telepon', '!=', '')
+            ->get();
+
+        if ($members->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Tidak ada anggota dengan nomor WhatsApp yang valid.']);
+        }
+
+        $postUrl = url('/berita/' . $post->slug);
+        $message = "📢 *{$post->title}*\n\n" . Str::limit(strip_tags($post->content), 200, '') . "\n\n🔗 {$postUrl}";
+
+        $whatsapp = app(\App\Services\WhatsAppService::class);
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($members as $member) {
+            $result = $whatsapp->send($member->telepon, $message);
+            if (empty($result['error'])) {
+                $sent++;
+            } else {
+                $failed++;
+            }
+        }
+
+        LogSuperadmin::create([
+            'user_id' => auth()->id(),
+            'aksi' => 'create',
+            'deskripsi' => "WhatsApp Blast postingan: {$post->title} ({$sent} berhasil, {$failed} gagal)",
+            'modul' => 'admin_web',
+            'referensi_id' => $post->id,
+            'ip_address' => request()->ip(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Berhasil mengirim ke {$sent} anggota" . ($failed > 0 ? " ({$failed} gagal)" : ''),
+        ]);
+    }
 }

@@ -24,6 +24,7 @@
 <body>
     @include('components.preloader')
     @include('components.dashboard.navbar')
+    <div class="sidebar-backdrop" onclick="closeSidebarMobile()"></div>
     <div class="dashboard-container">
         @include('components.dashboard.sidebar', ['menuItems' => $menuItems ?? []])
         <main class="main-content">
@@ -215,5 +216,54 @@
     </script>
     @stack('scripts')
     @livewireScripts
+    <script>
+    // Sidebar toggle
+    (function() {
+        var KEY = 'sidebar_collapsed';
+        var mql = window.matchMedia('(max-width: 767px)');
+
+        function isMobile() { return mql.matches; }
+        function getStored() { return localStorage.getItem(KEY); }
+
+        // Apply on load: mobile → collapsed, desktop → expanded (unless user toggled)
+        function applyDefault() {
+            var stored = getStored();
+            if (stored === '1') {
+                document.body.classList.add('sidebar-collapsed');
+            } else if (stored === '0') {
+                document.body.classList.remove('sidebar-collapsed');
+            } else {
+                // No stored preference: desktop=expanded, mobile=collapsed
+                if (isMobile()) {
+                    document.body.classList.add('sidebar-collapsed');
+                } else {
+                    document.body.classList.remove('sidebar-collapsed');
+                }
+            }
+        }
+        applyDefault();
+
+        // On resize, reset to defaults if user hasn't toggled
+        mql.addEventListener('change', function() {
+            var stored = getStored();
+            if (!stored) applyDefault();
+        });
+
+        window.toggleSidebar = function() {
+            if (isMobile()) {
+                // Mobile: toggle overlay open/close
+                document.body.classList.toggle('sidebar-open');
+            } else {
+                // Desktop: toggle collapsed/expanded
+                document.body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem(KEY, document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+            }
+        };
+
+        window.closeSidebarMobile = function() {
+            document.body.classList.remove('sidebar-open');
+        };
+    })();
+    </script>
 </body>
 </html>

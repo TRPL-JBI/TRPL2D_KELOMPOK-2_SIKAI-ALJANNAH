@@ -179,6 +179,8 @@ Route::middleware(['auth', 'role:adminweb'])->group(function () {
     Route::get('/adminweb/posts/{id}/edit', [AdminWebController::class, 'editPost'])->name('adminweb.posts.edit');
     Route::put('/adminweb/posts/{id}/publish', [AdminWebController::class, 'publishPost'])->name('adminweb.posts.publish');
     Route::delete('/adminweb/posts/{id}', [AdminWebController::class, 'destroyPost'])->name('adminweb.posts.destroy');
+    Route::get('/adminweb/posts/members', [AdminWebController::class, 'getMembers'])->name('adminweb.posts.members');
+    Route::post('/adminweb/posts/{id}/share-whatsapp', [AdminWebController::class, 'shareWhatsApp'])->name('adminweb.posts.share-whatsapp');
 
     Route::post('/adminweb/kategori', [AdminWebController::class, 'storeCategory'])->name('adminweb.kategori.store');
 

@@ -88,7 +88,116 @@ body {
     flex-direction: column;
     position: fixed;
     height: 100vh;
-    transition: all 0.3s;
+    transition: width 0.3s ease;
+    z-index: 200;
+    overflow: hidden;
+}
+
+.sidebar-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    transition: all 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar-menu-item .menu-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.sidebar-menu-item .menu-icon .material-icons {
+    font-size: 20px;
+}
+.sidebar-menu-item .menu-label {
+    transition: opacity 0.2s;
+    margin-left: 10px;
+}
+
+/* Collapsed sidebar */
+body.sidebar-collapsed .sidebar {
+    width: 68px;
+}
+body.sidebar-collapsed .sidebar-menu-item {
+    justify-content: center;
+    padding: 12px 0;
+    position: relative;
+}
+body.sidebar-collapsed .sidebar-menu-item .menu-label {
+    display: none;
+}
+body.sidebar-collapsed .sidebar-menu-item .menu-icon {
+    display: flex;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.15);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+body.sidebar-collapsed .sidebar-menu-item .menu-icon .material-icons {
+    font-size: 20px;
+}
+body.sidebar-collapsed .sidebar-menu-item:hover .menu-icon {
+    background: rgba(255,255,255,0.25);
+}
+body.sidebar-collapsed .sidebar-menu-item.active .menu-icon {
+    background: rgba(255,255,255,0.25);
+}
+body.sidebar-collapsed .main-content {
+    margin-left: 68px;
+}
+
+/* Mobile sidebar */
+@media (max-width: 767px) {
+    .sidebar {
+        transform: translateX(-100%);
+        width: 260px;
+        transition: transform 0.3s ease;
+    }
+    .sidebar .sidebar-menu-item {
+        justify-content: flex-start;
+        padding: 12px 20px;
+    }
+    .sidebar .sidebar-menu-item .menu-label {
+        display: inline;
+    }
+    .sidebar .sidebar-menu-item .menu-icon {
+        display: none;
+    }
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+    .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 150;
+    }
+    body.sidebar-open .sidebar-backdrop {
+        display: block;
+    }
+    body.sidebar-collapsed .sidebar,
+    body:not(.sidebar-open) .sidebar {
+        width: 260px;
+        transform: translateX(-100%);
+    }
+    body.sidebar-collapsed .sidebar .menu-label {
+        display: inline;
+    }
+    body.sidebar-collapsed .sidebar .menu-icon {
+        display: none;
+    }
+    body.sidebar-collapsed .main-content,
+    .main-content {
+        margin-left: 0;
+    }
 }
 
 .sidebar-logo {
@@ -104,11 +213,14 @@ body {
 }
 
 .sidebar-menu-item {
-    display: block;
+    display: flex;
+    align-items: center;
     padding: 12px 20px;
     color: rgba(255,255,255,0.8);
     text-decoration: none;
     transition: all 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .sidebar-menu-item:hover, .sidebar-menu-item.active {
@@ -139,6 +251,27 @@ body {
 .navbar-brand {
     font-size: 20px;
     font-weight: 600;
+    color: var(--primary-500);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.btn-sidebar-toggle:hover {
+    background: #f3f4f6;
     color: var(--primary-500);
 }
 
@@ -562,7 +695,8 @@ body {
 .btn-edit .material-icons, .btn-edit-disabled .material-icons, .btn-edit-active .material-icons { font-size: 14px; }
 .btn-edit { background: var(--primary-100); color: var(--primary-500); }
 .btn-edit:hover { background: var(--primary-200); }
-.btn-edit-disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+.btn-edit-disabled { background: var(--primary-100); color: var(--primary-500); cursor: pointer; }
+.btn-edit-disabled:hover { background: var(--primary-200); }
 .btn-edit-active { background: var(--primary-500); color: #fff; }
 .btn-edit-active:hover { background: var(--primary-500); }
 

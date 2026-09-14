@@ -5,6 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $post->title }} - RKM Al-Jannah</title>
     @include('components.favicon')
+
+    {{-- Open Graph Meta Tags for WhatsApp Link Preview --}}
+    @php
+        $ogTitle = $post->title;
+        $ogDesc = Str::limit(strip_tags($post->content), 160, '');
+        $ogUrl = url('/berita/' . $post->slug);
+        $ogImage = $post->getThumbnailUrl() ? asset($post->getThumbnailUrl()) : '';
+    @endphp
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ $ogTitle }}">
+    <meta property="og:description" content="{{ $ogDesc }}">
+    <meta property="og:url" content="{{ $ogUrl }}">
+    @if($ogImage)
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+    @endif
+    <meta name="twitter:card" content="{{ $ogImage ? 'summary_large_image' : 'summary' }}">
+    <meta name="twitter:title" content="{{ $ogTitle }}">
+    <meta name="twitter:description" content="{{ $ogDesc }}">
+    @if($ogImage)
+        <meta name="twitter:image" content="{{ $ogImage }}">
+    @endif
     
     <!-- Google Fonts: Space Grotesk & Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

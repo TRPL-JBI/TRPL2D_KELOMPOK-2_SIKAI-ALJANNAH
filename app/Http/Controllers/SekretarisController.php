@@ -11,6 +11,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Services\WhatsAppService;
 use OpenSpout\Common\Entity\Row;
@@ -178,12 +179,14 @@ class SekretarisController extends Controller
         $query = LogAktivitas::where('user_id', Auth::id())->latest();
 
         if ($search) {
-            $query->where('deskripsi', 'like', "%{$search}%")
-                ->orWhere('aksi', 'like', "%{$search}%")
-                ->orWhere('modul', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('deskripsi', 'like', "%{$search}%")
+                  ->orWhere('aksi', 'like', "%{$search}%")
+                  ->orWhere('modul', 'like', "%{$search}%");
+            });
         }
 
-        $activities = $query->get();
+        $activities = $query->paginate(15)->appends(['search' => $search]);
 
         return view('dashboard.sekretaris.log', compact('activities', 'search'));
     }
@@ -500,66 +503,87 @@ class SekretarisController extends Controller
 
         $writer->addRow(Row::fromValues([
             'PETUNJUK: Isi setiap kolom sesuai petunjuk di bawah. Hapus baris contoh sebelum import.',
-            '', '', '', '', '', '',
+            '', '', '', '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
-            'nomor_anggota', 'nama', 'email', 'telepon', 'alamat', 'status', 'nama_tertanggung',
+            'nomor_anggota', 'nama', 'email', 'telepon', 'alamat', 'tanggal_lahir', 'jenis_kelamin', 'rt_rw', 'kelurahan', 'status', 'nama_tertanggung',
         ]));
 
         $writer->addRow(Row::fromValues([
-            '(auto)', 'Contoh Nama', 'contoh@email.com', '08123456789', 'Alamat lengkap', 'aktif', 'Contoh Istri, Contoh Anak',
+            '(auto)', 'Contoh Nama', 'contoh@email.com', '08123456789', 'Alamat lengkap', '1990-01-15', 'laki-laki', '001/002', 'Kelurahan Contoh', 'aktif', 'Contoh Istri, Contoh Anak',
         ]));
 
-        $writer->addRow(Row::fromValues([
-            '', '', '', '', '', '', '',
-        ]));
+        $writer->addRow(Row::fromValues(['', '', '', '', '', '', '', '', '', '', '']));
 
         $writer->addRow(Row::fromValues([
-            'KETERANGAN KOLOM:',
-            '', '', '', '', '', '',
+            'KETERANGAN KOLOM:', '', '', '', '', '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'nomor_anggota',
             'Opsional. Format RKM-XXXXX. Kosongkan untuk diisi otomatis.',
-            '', '', '', '', '',
+            '', '', '', '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'nama',
             'Wajib. Nama lengkap anggota.',
-            '', '', '', '', '',
+            '', '', '', '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'email',
             'Wajib. Alamat email (harus unik).',
-            '', '', '', '', '',
+            '', '', '', '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'telepon',
             'Wajib. Nomor telepon.',
-            '', '', '', '', '',
+            '', '', '', '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'alamat',
             'Wajib. Alamat lengkap anggota.',
-            '', '', '', '', '',
+            '', '', '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'tanggal_lahir',
+            'Opsional. Format YYYY-MM-DD (contoh: 1990-01-15).',
+            '', '', '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'jenis_kelamin',
+            'Opsional. "laki-laki" atau "perempuan".',
+            '', '', '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'rt_rw',
+            'Opsional. Contoh: 001/002.',
+            '', '', '', '', '', '', '', '', '',
+        ]));
+
+        $writer->addRow(Row::fromValues([
+            'kelurahan',
+            'Opsional. Nama kelurahan.',
+            '', '', '', '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'status',
             'Opsional. "aktif" atau "non_aktif". Default: aktif.',
-            '', '', '', '', '',
+            '', '', '', '', '', '', '', '', '',
         ]));
 
         $writer->addRow(Row::fromValues([
             'nama_tertanggung',
             'Opsional. Nama anggota keluarga yang ditanggung. Pisahkan dengan koma (,) jika lebih dari satu.',
-            '', '', '', '', '',
+            '', '', '', '', '', '', '', '', '',
         ]));
 
         $writer->close();
@@ -578,127 +602,209 @@ class SekretarisController extends Controller
         $reader = new Reader;
         $reader->open($filePath);
 
-        $berhasil = 0;
-        $gagal = 0;
-        $errors = [];
-
+        // ── Read all rows from file ──
+        $rows = [];
         foreach ($reader->getSheetIterator() as $sheet) {
             foreach ($sheet->getRowIterator() as $idx => $row) {
-                if ($idx === 1) {
-                    continue;
-                }
-
+                if ($idx <= 2) continue;
                 $cells = $row->toArray();
-
-                $nomorAnggota = trim((string) ($cells[0] ?? ''));
                 $nama = trim((string) ($cells[1] ?? ''));
                 $email = trim((string) ($cells[2] ?? ''));
-                $telepon = trim((string) ($cells[3] ?? ''));
-                $alamat = trim((string) ($cells[4] ?? ''));
-                $status = trim((string) ($cells[5] ?? ''));
-                $namaTertanggung = trim((string) ($cells[6] ?? ''));
+                if (empty($nama) && empty($email)) continue;
 
-                if (empty($nama) && empty($email)) {
-                    continue;
-                }
-
-                try {
-                    if (empty($nama)) {
-                        throw new \Exception("Baris $idx: nama wajib diisi.");
-                    }
-                    if (empty($email)) {
-                        throw new \Exception("Baris $idx: email wajib diisi.");
-                    }
-                    if (empty($telepon)) {
-                        throw new \Exception("Baris $idx: telepon wajib diisi.");
-                    }
-                    if (empty($alamat)) {
-                        throw new \Exception("Baris $idx: alamat wajib diisi.");
-                    }
-
-                    if (Anggota::where('email', $email)->exists()) {
-                        throw new \Exception("Baris $idx: email \"$email\" sudah terdaftar.");
-                    }
-
-                    if (empty($status)) {
-                        $status = 'aktif';
-                    } elseif (! in_array($status, ['aktif', 'non_aktif'])) {
-                        throw new \Exception("Baris $idx: status \"$status\" tidak valid. Gunakan aktif atau non_aktif.");
-                    }
-
-                    if (empty($nomorAnggota)) {
-                        $lastId = Anggota::max('id') ?? 0;
-                        $nomorAnggota = 'RKM-'.str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
-
-                        while (Anggota::where('nomor_anggota', $nomorAnggota)->exists()) {
-                            $lastId++;
-                            $nomorAnggota = 'RKM-'.str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
-                        }
-                    } else {
-                        if (Anggota::where('nomor_anggota', $nomorAnggota)->exists()) {
-                            throw new \Exception("Baris $idx: nomor anggota \"$nomorAnggota\" sudah terdaftar.");
-                        }
-                    }
-
-                    $anggota = Anggota::create([
-                        'nomor_anggota' => $nomorAnggota,
-                        'nama' => $nama,
-                        'email' => $email,
-                        'telepon' => $telepon,
-                        'alamat' => $alamat,
-                        'status' => $status,
-                        'created_by' => Auth::id(),
-                    ]);
-
-                    $calon = CalonAnggota::create([
-                        'nama' => $nama,
-                        'email' => $email,
-                        'telepon' => $telepon,
-                        'alamat' => $alamat,
-                        'status' => 'disetujui',
-                        'anggota_id' => $anggota->id,
-                    ]);
-
-                    $anggota->update(['calon_anggota_id' => $calon->id]);
-
-                    if (! empty($namaTertanggung)) {
-                        $namaList = array_map('trim', explode(',', $namaTertanggung));
-                        $namaList = array_filter($namaList);
-
-                        foreach ($namaList as $nm) {
-                            KeluargaAnggota::create([
-                                'calon_anggota_id' => $calon->id,
-                                'nama' => $nm,
-                                'jenis_kelamin' => 'laki-laki',
-                                'tanggal_lahir' => now()->toDateString(),
-                            ]);
-                        }
-                    }
-
-                    LogAktivitas::create([
-                        'user_id' => Auth::id(),
-                        'aksi' => 'import',
-                        'deskripsi' => "Import anggota {$nama} - {$nomorAnggota}",
-                        'modul' => 'Sekretaris',
-                        'referensi_id' => 0,
-                    ]);
-
-                    $berhasil++;
-                } catch (\Exception $e) {
-                    $gagal++;
-                    $errors[] = $e->getMessage();
-                }
+                $rows[$idx] = [
+                    'nomor_anggota' => trim((string) ($cells[0] ?? '')),
+                    'nama'          => $nama,
+                    'email'         => $email,
+                    'telepon'       => trim((string) ($cells[3] ?? '')),
+                    'alamat'        => trim((string) ($cells[4] ?? '')),
+                    'tanggal_lahir' => trim((string) ($cells[5] ?? '')),
+                    'jenis_kelamin' => trim((string) ($cells[6] ?? '')),
+                    'rt_rw'         => trim((string) ($cells[7] ?? '')),
+                    'kelurahan'     => trim((string) ($cells[8] ?? '')),
+                    'status'        => trim((string) ($cells[9] ?? '')),
+                    'nama_tertanggung' => trim((string) ($cells[10] ?? '')),
+                ];
             }
         }
-
         $reader->close();
 
-        return response()->json([
-            'success' => $berhasil > 0,
-            'message' => "Import selesai: $berhasil berhasil, $gagal gagal.",
-            'berhasil' => $berhasil,
-            'gagal' => $gagal,
-            'errors' => $errors,
-        ]);
+        if (empty($rows)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File kosong atau tidak ada data yang bisa diimport.',
+                'berhasil' => 0,
+                'gagal' => 0,
+                'errors' => ['Tidak ada baris data ditemukan. Pastikan file tidak kosong dan baris pertama (header) sudah benar.'],
+            ]);
+        }
+
+        // ── Phase 1: Validate all rows before importing anything ──
+        $errors = [];
+        $validatedRows = [];
+        $usedNomorAnggota = [];
+        $usedEmails = [];
+        // Preload existing emails & nomor_anggota for bulk uniqueness checks
+        $existingEmails = Anggota::pluck('email')->map(fn ($e) => strtolower($e))->flip()->toArray();
+        $lastId = Anggota::max('id') ?? 0;
+
+        foreach ($rows as $idx => $r) {
+            $nama = $r['nama'];
+            $email = $r['email'];
+            $nomorAnggota = $r['nomor_anggota'];
+            $telepon = $r['telepon'];
+            $alamat = $r['alamat'];
+            $tanggalLahir = $r['tanggal_lahir'];
+            $jenisKelamin = $r['jenis_kelamin'];
+            $status = $r['status'];
+
+            if (empty($nama)) {
+                $errors[] = "Baris $idx: nama wajib diisi.";
+                continue;
+            }
+            if (empty($email)) {
+                $errors[] = "Baris $idx: email wajib diisi.";
+                continue;
+            }
+            if (empty($telepon)) {
+                $errors[] = "Baris $idx: telepon wajib diisi.";
+                continue;
+            }
+            if (empty($alamat)) {
+                $errors[] = "Baris $idx: alamat wajib diisi.";
+                continue;
+            }
+
+            // Email uniqueness (DB + batch duplicates)
+            $emailLower = strtolower($email);
+            if (isset($existingEmails[$emailLower]) || isset($usedEmails[$emailLower])) {
+                $errors[] = "Baris $idx: email \"$email\" sudah terdaftar.";
+                continue;
+            }
+            $usedEmails[$emailLower] = true;
+
+            // Status validation
+            if (empty($status)) {
+                $r['status'] = 'aktif';
+            } elseif (!in_array($status, ['aktif', 'non_aktif'])) {
+                $errors[] = "Baris $idx: status \"$status\" tidak valid. Gunakan aktif atau non_aktif.";
+                continue;
+            }
+
+            // Date format validation
+            if (!empty($tanggalLahir) && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggalLahir)) {
+                $errors[] = "Baris $idx: tanggal_lahir \"$tanggalLahir\" tidak valid. Gunakan format YYYY-MM-DD.";
+                continue;
+            }
+
+            // Jenis kelamin validation
+            if (!empty($jenisKelamin) && !in_array($jenisKelamin, ['laki-laki', 'perempuan'])) {
+                $errors[] = "Baris $idx: jenis_kelamin \"$jenisKelamin\" tidak valid. Gunakan laki-laki atau perempuan.";
+                continue;
+            }
+
+            // Nomor anggota validation & auto-generate
+            if (empty($nomorAnggota)) {
+                do {
+                    $lastId++;
+                    $nomorAnggota = 'RKM-' . str_pad($lastId, 5, '0', STR_PAD_LEFT);
+                } while (Anggota::where('nomor_anggota', $nomorAnggota)->exists() || isset($usedNomorAnggota[$nomorAnggota]));
+                $r['nomor_anggota'] = $nomorAnggota;
+            } else {
+                if (Anggota::where('nomor_anggota', $nomorAnggota)->exists() || isset($usedNomorAnggota[$nomorAnggota])) {
+                    $errors[] = "Baris $idx: nomor anggota \"$nomorAnggota\" sudah terdaftar.";
+                    continue;
+                }
+            }
+            $usedNomorAnggota[$r['nomor_anggota']] = true;
+
+            $validatedRows[$idx] = $r;
+        }
+
+        // If any validation error, abort — nothing gets imported
+        if (!empty($errors)) {
+            $total = count($rows);
+            $errorCount = count($errors);
+            return response()->json([
+                'success' => false,
+                'message' => "Import dibatalkan: $errorCount error ditemukan dari $total baris data. Tidak ada data yang diimport.",
+                'berhasil' => 0,
+                'gagal' => $total,
+                'errors' => $errors,
+            ]);
+        }
+
+        // ── Phase 2: All validation passed — import everything in one transaction ──
+        \DB::beginTransaction();
+        $berhasil = 0;
+
+        try {
+            foreach ($validatedRows as $idx => $r) {
+                $anggota = Anggota::create([
+                    'nomor_anggota' => $r['nomor_anggota'],
+                    'nama'          => $r['nama'],
+                    'email'         => $r['email'],
+                    'telepon'       => $r['telepon'],
+                    'alamat'        => $r['alamat'],
+                    'status'        => $r['status'],
+                    'tanggal_aktif_kembali' => now()->toDateString(),
+                    'created_by'    => Auth::id(),
+                ]);
+
+                $calon = CalonAnggota::create([
+                    'nama'          => $r['nama'],
+                    'email'         => $r['email'],
+                    'telepon'       => $r['telepon'],
+                    'alamat'        => $r['alamat'],
+                    'tanggal_lahir' => !empty($r['tanggal_lahir']) ? $r['tanggal_lahir'] : null,
+                    'jenis_kelamin' => !empty($r['jenis_kelamin']) ? $r['jenis_kelamin'] : null,
+                    'rt_rw'         => !empty($r['rt_rw']) ? $r['rt_rw'] : null,
+                    'kelurahan'     => !empty($r['kelurahan']) ? $r['kelurahan'] : null,
+                    'status'        => 'disetujui',
+                    'anggota_id'    => $anggota->id,
+                ]);
+
+                $anggota->update(['calon_anggota_id' => $calon->id]);
+
+                if (!empty($r['nama_tertanggung'])) {
+                    $namaList = array_filter(array_map('trim', explode(',', $r['nama_tertanggung'])));
+                    foreach ($namaList as $nm) {
+                        KeluargaAnggota::create([
+                            'calon_anggota_id' => $calon->id,
+                            'nama' => $nm,
+                        ]);
+                    }
+                }
+
+                LogAktivitas::create([
+                    'user_id' => Auth::id(),
+                    'aksi' => 'import',
+                    'deskripsi' => "Import anggota {$r['nama']} - {$r['nomor_anggota']}",
+                    'modul' => 'Sekretaris',
+                    'referensi_id' => 0,
+                ]);
+
+                $berhasil++;
+            }
+
+            \DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Import berhasil: $berhasil anggota telah ditambahkan.",
+                'berhasil' => $berhasil,
+                'gagal' => 0,
+                'errors' => [],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Import dibatalkan: terjadi error saat menyimpan data. Seluruh data telah di-rollback.',
+                'berhasil' => 0,
+                'gagal' => count($validatedRows),
+                'errors' => ['Error teknis: ' . $e->getMessage()],
+            ]);
+        }
     }
 }

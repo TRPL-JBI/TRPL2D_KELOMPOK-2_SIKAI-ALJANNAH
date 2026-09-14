@@ -460,7 +460,12 @@
             }
         }
     </style>
-    <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js')}</script>
+    <script>
+    /* Unregister service worker on public registration page.
+       The SW's background fetch consumes session flash data (success/error messages)
+       before the preloader XHR can read it, causing silent failures. */
+    if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(reg){reg.unregister()})})}
+    </script>
 </head>
 <body>
     @include('components.preloader')
@@ -485,10 +490,24 @@
                     </div>
                 @endif
 
-                @if($errors->any())
+                @if(session('error'))
                     <div style="background-color: #fde8e8; border: 1px solid #e53e3e; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; font-family: 'Poppins', sans-serif; font-size: 0.95rem; color: #742a2a;">
                         <span class="material-icons" style="color: #e53e3e; font-size: 20px;">error</span>
-                        {{ $errors->first() }}
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                @if($errors->any())
+                    <div style="background-color: #fde8e8; border: 1px solid #e53e3e; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; font-family: 'Poppins', sans-serif; font-size: 0.95rem; color: #742a2a;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                            <span class="material-icons" style="color: #e53e3e; font-size: 20px;">error</span>
+                            <strong>Terjadi kesalahan:</strong>
+                        </div>
+                        <ul style="margin: 0; padding-left: 1.5rem;">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
                     </div>
                 @endif
 
@@ -505,12 +524,13 @@
                             <label for="nama_lengkap" class="form-label">
                                 Nama Lengkap/Nama Kepala Keluarga <span class="required">*</span>
                             </label>
-                            <input 
-                                type="text" 
-                                id="nama_lengkap" 
-                                name="nama_lengkap" 
-                                class="form-input" 
+                            <input
+                                type="text"
+                                id="nama_lengkap"
+                                name="nama_lengkap"
+                                class="form-input"
                                 placeholder="Masukkan nama lengkap"
+                                value="{{ old('nama_lengkap') }}"
                                 required
                             >
                         </div>
@@ -538,11 +558,12 @@
                             <label for="tanggal_lahir" class="form-label">
                                 Tanggal Lahir <span class="required">*</span>
                             </label>
-                            <input 
-                                type="date" 
-                                id="tanggal_lahir" 
-                                name="tanggal_lahir" 
-                                class="form-input" 
+                            <input
+                                type="date"
+                                id="tanggal_lahir"
+                                name="tanggal_lahir"
+                                class="form-input"
+                                value="{{ old('tanggal_lahir') }}"
                                 required
                             >
                         </div>
@@ -554,21 +575,23 @@
                             </label>
                             <div class="radio-group">
                                 <div class="radio-option">
-                                    <input 
-                                        type="radio" 
-                                        id="laki_laki" 
-                                        name="jenis_kelamin" 
+                                    <input
+                                        type="radio"
+                                        id="laki_laki"
+                                        name="jenis_kelamin"
                                         value="laki_laki"
+                                        {{ old('jenis_kelamin') === 'laki_laki' ? 'checked' : '' }}
                                         required
                                     >
                                     <label for="laki_laki">Laki-laki</label>
                                 </div>
                                 <div class="radio-option">
-                                    <input 
-                                        type="radio" 
-                                        id="perempuan" 
-                                        name="jenis_kelamin" 
+                                    <input
+                                        type="radio"
+                                        id="perempuan"
+                                        name="jenis_kelamin"
                                         value="perempuan"
+                                        {{ old('jenis_kelamin') === 'perempuan' ? 'checked' : '' }}
                                         required
                                     >
                                     <label for="perempuan">Perempuan</label>
@@ -581,13 +604,13 @@
                             <label for="alamat" class="form-label">
                                 Alamat Lengkap <span class="required">*</span>
                             </label>
-                            <textarea 
-                                id="alamat" 
-                                name="alamat" 
-                                class="form-textarea" 
+                            <textarea
+                                id="alamat"
+                                name="alamat"
+                                class="form-textarea"
                                 placeholder="Masukkan alamat lengkap"
                                 required
-                            ></textarea>
+                            >{{ old('alamat') }}</textarea>
                         </div>
 
                         <!-- RT/RW dan Kelurahan -->
@@ -596,12 +619,13 @@
                                 <label for="rt_rw" class="form-label">
                                     RT/RW <span class="required">*</span>
                                 </label>
-                                <input 
-                                    type="text" 
-                                    id="rt_rw" 
-                                    name="rt_rw" 
-                                    class="form-input" 
+                                <input
+                                    type="text"
+                                    id="rt_rw"
+                                    name="rt_rw"
+                                    class="form-input"
                                     placeholder="Contoh: 001/002"
+                                    value="{{ old('rt_rw') }}"
                                     required
                                 >
                             </div>
@@ -609,12 +633,13 @@
                                 <label for="kelurahan" class="form-label">
                                     Kelurahan <span class="required">*</span>
                                 </label>
-                                <input 
-                                    type="text" 
-                                    id="kelurahan" 
-                                    name="kelurahan" 
-                                    class="form-input" 
+                                <input
+                                    type="text"
+                                    id="kelurahan"
+                                    name="kelurahan"
+                                    class="form-input"
                                     placeholder="Masukkan kelurahan"
+                                    value="{{ old('kelurahan') }}"
                                     required
                                 >
                             </div>
@@ -626,12 +651,13 @@
                                 <label for="nomor_hp" class="form-label">
                                     Nomor HP <span class="required">*</span>
                                 </label>
-                                <input 
-                                    type="tel" 
-                                    id="nomor_hp" 
-                                    name="nomor_hp" 
-                                    class="form-input" 
+                                <input
+                                    type="tel"
+                                    id="nomor_hp"
+                                    name="nomor_hp"
+                                    class="form-input"
                                     placeholder="Contoh: 081234567890"
+                                    value="{{ old('nomor_hp') }}"
                                     required
                                 >
                             </div>
@@ -639,12 +665,13 @@
                                 <label for="email" class="form-label">
                                     Email <span class="required">*</span>
                                 </label>
-                                <input 
-                                    type="email" 
-                                    id="email" 
-                                    name="email" 
-                                    class="form-input" 
+                                <input
+                                    type="email"
+                                    id="email"
+                                    name="email"
+                                    class="form-input"
                                     placeholder="contoh@email.com"
+                                    value="{{ old('email') }}"
                                     required
                                 >
                             </div>

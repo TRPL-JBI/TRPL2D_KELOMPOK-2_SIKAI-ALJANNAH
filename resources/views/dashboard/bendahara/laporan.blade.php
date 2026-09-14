@@ -54,11 +54,11 @@
                 <span class="material-icons dropdown-icon">expand_more</span>
             </div>
             <div class="filter-select-wrap">
-                <select id="periodSelect">
-                    <option value="semua">Semua Waktu</option>
-                    <option value="hari">Harian</option>
-                    <option value="minggu">Mingguan</option>
-                    <option value="bulan">Bulanan</option>
+                <select id="monthSelect">
+                    <option value="">Semua Bulan</option>
+                    @foreach (['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] as $i => $m)
+                    <option value="{{ $i + 1 }}">{{ $m }}</option>
+                    @endforeach
                 </select>
                 <span class="material-icons dropdown-icon">expand_more</span>
             </div>
@@ -127,20 +127,25 @@
         var tableBody = document.getElementById('tableBody');
         var searchInput = document.getElementById('searchInput');
         var yearSelect = document.getElementById('yearSelect');
-        var periodSelect = document.getElementById('periodSelect');
+        var monthSelect = document.getElementById('monthSelect');
         var dataCount = document.getElementById('dataCount');
         var pagination = document.getElementById('pagination');
         var statValueEls = document.querySelectorAll('.stat-value');
         var currentPage = 1;
 
+        var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
         function fetchLaporanData() {
             var params = [];
             var search = searchInput.value;
             var year = yearSelect.value;
-            var period = periodSelect.value;
+            var month = monthSelect.value;
             if (search) params.push('search=' + encodeURIComponent(search));
             params.push('year=' + encodeURIComponent(year));
-            if (period && period !== 'semua') params.push('period=' + encodeURIComponent(period));
+            if (month) {
+                params.push('period=bulan');
+                params.push('month=' + encodeURIComponent(month));
+            }
             params.push('page=' + currentPage);
             var url = '/bendahara/laporan/data' + '?' + params.join('&');
             fetch(url)
@@ -152,7 +157,10 @@
                     renderTable(res.transaksi);
                     dataCount.textContent = res.totalData;
                     renderPagination(res.currentPage, res.lastPage);
-                    document.getElementById('headerDate').textContent = year;
+                    // Update header date display
+                    var headerText = year;
+                    if (month) headerText = monthNames[parseInt(month) - 1] + ' ' + year;
+                    document.getElementById('headerDate').textContent = headerText;
                 });
         }
 
@@ -166,15 +174,34 @@
         }
 
         function renderPagination(page, lastPage) {
+            if (lastPage <= 1) { pagination.innerHTML = ''; return; }
             var html = '';
+            // Prev arrow
             html += '<span class="page-arrow" data-page="' + (page > 1 ? page - 1 : 1) + '"' + (page <= 1 ? ' style="opacity:.3;cursor:default;"' : '') + '>‹</span>';
-            for (var i = 1; i <= lastPage; i++) {
-                html += '<span class="page-num' + (i === page ? ' active' : '') + '" data-page="' + i + '">' + i + '</span>';
+
+            // Build page numbers: always show first, last, and current ± 1
+            var pages = [];
+            pages.push(1);
+            if (page > 3) pages.push('...');
+            for (var i = Math.max(2, page - 1); i <= Math.min(lastPage - 1, page + 1); i++) {
+                pages.push(i);
             }
+            if (page < lastPage - 2) pages.push('...');
+            if (lastPage > 1) pages.push(lastPage);
+
+            pages.forEach(function(p) {
+                if (p === '...') {
+                    html += '<span class="page-num" style="cursor:default;opacity:.4;">…</span>';
+                } else {
+                    html += '<span class="page-num' + (p === page ? ' active' : '') + '" data-page="' + p + '">' + p + '</span>';
+                }
+            });
+
+            // Next arrow
             html += '<span class="page-arrow" data-page="' + (page < lastPage ? page + 1 : lastPage) + '"' + (page >= lastPage ? ' style="opacity:.3;cursor:default;"' : '') + '>›</span>';
             pagination.innerHTML = html;
 
-            pagination.querySelectorAll('.page-num, .page-arrow').forEach(function(el) {
+            pagination.querySelectorAll('.page-num:not([style]), .page-arrow').forEach(function(el) {
                 el.addEventListener('click', function() {
                     var p = parseInt(this.getAttribute('data-page'));
                     if (p && p !== currentPage) { currentPage = p; fetchLaporanData(); }
@@ -184,7 +211,7 @@
 
         searchInput.addEventListener('input', function() { currentPage = 1; fetchLaporanData(); });
         yearSelect.addEventListener('change', function() { currentPage = 1; fetchLaporanData(); });
-        periodSelect.addEventListener('change', function() { currentPage = 1; fetchLaporanData(); });
+        monthSelect.addEventListener('change', function() { currentPage = 1; fetchLaporanData(); });
 
         fetchLaporanData();
     })();

@@ -1,5 +1,8 @@
 <header class="navbar">
     <div class="navbar-brand">
+        <button class="btn-sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+            <span class="material-icons">menu</span>
+        </button>
         RKM AL-JANNAH
     </div>
     <div class="navbar-right">

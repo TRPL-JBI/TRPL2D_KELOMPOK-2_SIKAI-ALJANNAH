@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <button class="btn-icon btn-info" onclick="openInfoModal(this)" title="Detail Transaksi">
                             <span class="material-icons">info</span>
                         </button>
-                        <button class="btn-edit-disabled" onclick="openModal(this)">
+                        <button class="btn-edit" onclick="openModal(this)">
                             <span class="material-icons">lock</span>
                             Edit
                         </button>
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var tbody = document.getElementById('riwayatTransaksiBody');
             var row = document.createElement('tr');
             tbody.insertBefore(row, tbody.firstChild);
-            row.outerHTML = '<tr data-target-table="' + (d.tipe === 'Pemasukan' ? 'pemasukan' : 'pengeluaran') + '" data-jumlah="' + d.jumlah + '" data-kategori="' + (d.kategori || '') + '" data-keterangan="' + (d.keterangan || '') + '" data-tanggal="' + d.tanggal + '" data-tipe="' + d.tipe + '" data-file-url="' + (d.file_url || '') + '"><td data-target-id="' + d.id + '">' + d.tanggal + '</td><td><span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;' + (d.tipe === 'Pemasukan' ? 'background:#d1fae5;color:#065f46;' : 'background:#fee2e2;color:#991b1b;') + '">' + d.tipe + '</span></td><td class="nominal-value">Rp ' + Number(d.jumlah).toLocaleString('id-ID') + '</td><td class="name-cell">' + d.kategori + '</td><td>' + (d.keterangan || '-') + '</td><td><button class="btn-icon btn-info" onclick="openInfoModal(this)" title="Detail Transaksi"><span class="material-icons">info</span></button><button class="btn-edit-disabled" onclick="openModal(this)"><span class="material-icons">lock</span> Edit</button></td></tr>';
+            row.outerHTML = '<tr data-target-table="' + (d.tipe === 'Pemasukan' ? 'pemasukan' : 'pengeluaran') + '" data-jumlah="' + d.jumlah + '" data-kategori="' + (d.kategori || '') + '" data-keterangan="' + (d.keterangan || '') + '" data-tanggal="' + d.tanggal + '" data-tipe="' + d.tipe + '" data-file-url="' + (d.file_url || '') + '"><td data-target-id="' + d.id + '">' + d.tanggal + '</td><td><span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;' + (d.tipe === 'Pemasukan' ? 'background:#d1fae5;color:#065f46;' : 'background:#fee2e2;color:#991b1b;') + '">' + d.tipe + '</span></td><td class="nominal-value">Rp ' + Number(d.jumlah).toLocaleString('id-ID') + '</td><td class="name-cell">' + d.kategori + '</td><td>' + (d.keterangan || '-') + '</td><td><button class="btn-icon btn-info" onclick="openInfoModal(this)" title="Detail Transaksi"><span class="material-icons">info</span></button><button class="btn-edit" onclick="openModal(this)"><span class="material-icons">lock</span> Edit</button></td></tr>';
             var waMsg = d.wa === 'terkirim' ? ' & kwitansi terkirim via WA' : (d.wa === 'gagal' ? ' (kwitansi WA gagal)' : '');
             showTransaksiToast('Transaksi berhasil dicatat' + waMsg);
             enableBtn(btn);
@@ -358,19 +358,59 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showImportResult(res) {
         var content = document.getElementById('importResultContent');
-        if (res.errors && res.errors.length > 0) {
-            var list = '<ul style="margin:8px 0 0 16px;font-size:12px;color:#dc2626;text-align:left;">';
-            for (var i = 0; i < Math.min(res.errors.length, 10); i++) {
-                list += '<li>' + res.errors[i] + '</li>';
-            }
-            if (res.errors.length > 10) {
-                list += '<li>...dan ' + (res.errors.length - 10) + ' error lainnya</li>';
-            }
-            list += '</ul>';
-            content.innerHTML = '<div style="color:' + (res.berhasil > 0 ? '#059669' : '#dc2626') + ';font-weight:600;margin-bottom:8px;">' + res.message + '</div>' + list;
-        } else {
-            content.innerHTML = '<div style="color:#059669;font-weight:600;">' + res.message + '</div>';
+        var html = '';
+
+        // Summary badge
+        var isOk = res.berhasil > 0 && res.gagal === 0;
+        var isPartial = res.berhasil > 0 && res.gagal > 0;
+        var isAllFailed = res.berhasil === 0 && res.gagal > 0;
+        var badgeColor = isOk ? '#059669' : (isPartial ? '#d97706' : '#dc2626');
+        var badgeIcon = isOk ? 'check_circle' : (isPartial ? 'warning' : 'cancel');
+
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;background:' + badgeColor + '11;border:1px solid ' + badgeColor + '33;margin-bottom:12px;">';
+        html += '<span class="material-icons" style="color:' + badgeColor + ';font-size:22px;">' + badgeIcon + '</span>';
+        html += '<div><div style="font-weight:700;color:' + badgeColor + ';font-size:14px;">' + res.message + '</div>';
+
+        if (res.berhasil > 0) {
+            html += '<div style="font-size:12px;color:#059669;margin-top:2px;">' + res.berhasil + ' data berhasil diimport</div>';
         }
+        if (res.gagal > 0) {
+            html += '<div style="font-size:12px;color:#dc2626;margin-top:2px;">' + res.gagal + ' data gagal / dibatalkan</div>';
+        }
+        html += '</div></div>';
+
+        // New categories created
+        if (res.new_categories && res.new_categories.length > 0) {
+            html += '<div style="margin-top:8px;padding:10px 14px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;font-size:12px;color:#1e40af;">';
+            html += '<span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;">add_circle</span>';
+            html += '<strong>Kategori baru dibuat:</strong><ul style="margin:4px 0 0 20px;padding:0;">';
+            for (var c = 0; c < res.new_categories.length; c++) {
+                html += '<li>' + res.new_categories[c] + '</li>';
+            }
+            html += '</ul></div>';
+        }
+
+        // Error list
+        if (res.errors && res.errors.length > 0) {
+            html += '<div style="margin-top:8px;">';
+            html += '<div style="font-weight:600;font-size:12px;color:#6b7280;margin-bottom:6px;">Detail Error (' + res.errors.length + '):</div>';
+            html += '<div style="max-height:240px;overflow-y:auto;border:1px solid #f3f4f6;border-radius:8px;background:#fef2f2;">';
+            html += '<ul style="margin:0;padding:12px 12px 12px 32px;font-size:12px;color:#991b1b;line-height:1.8;">';
+            for (var i = 0; i < res.errors.length; i++) {
+                html += '<li style="border-bottom:1px solid #fecaca;padding-bottom:4px;">' + res.errors[i] + '</li>';
+            }
+            html += '</ul></div>';
+
+            if (isAllFailed) {
+                html += '<div style="margin-top:10px;padding:10px 14px;border-radius:8px;background:#fef3c7;border:1px solid #fbbf24;font-size:12px;color:#92400e;">';
+                html += '<span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;">info</span>';
+                html += '<strong>Semua data dibatalkan.</strong> Perbaiki semua error di atas, lalu import ulang. Tidak ada data yang tersimpan ke database.';
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+
+        content.innerHTML = html;
         document.getElementById('modalImportResult').classList.add('active');
     }
 
