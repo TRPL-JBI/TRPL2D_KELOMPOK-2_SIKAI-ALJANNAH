@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Dashboard Concept</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* 1. Fluid Typography & Whitespace menggunakan clamp() */
+        .text-fluid-title { font-size: clamp(1.5rem, 2.5vw + 1rem, 2.25rem); }
+        .text-fluid-subtitle { font-size: clamp(1rem, 1vw + 0.5rem, 1.25rem); }
+        .p-fluid { padding: clamp(1rem, 2vw, 2rem); }
+
+        /* 2. Sidebar Transition */
+        .sidebar {
+            transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
+        }
+        @media (max-width: 767px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+        }
+
+        /* 3. Table to Card Transformation */
+        @media (max-width: 767px) {
+            /* Ubah struktur tabel menjadi block agar bisa jadi card */
+            .responsive-table thead { display: none; }
+            .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; }
+            
+            .responsive-table tr {
+                margin-bottom: 1.5rem;
+                border: 1px solid #e5e7eb;
+                border-radius: 0.75rem;
+                padding: 1rem;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                background-color: white;
+            }
+            
+            .responsive-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                text-align: right;
+                border-bottom: 1px solid #f3f4f6;
+                padding: 0.75rem 0;
+            }
+            
+            .responsive-table td:last-child { border-bottom: none; }
+            
+            /* Ambil judul kolom dari atribut data-label */
+            .responsive-table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #374151;
+                text-align: left;
+                padding-right: 1rem;
+            }
+        }
+
+        /* 4. Auto Collapse untuk teks panjang di mobile */
+        .collapse-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 1; /* Default di mobile: 1 baris */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 60%; /* Batasi lebar agar seimbang dengan label */
+        }
+        @media (min-width: 768px) {
+            .collapse-text {
+                -webkit-line-clamp: unset; /* Di desktop tampil utuh */
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Overlay untuk mobile saat sidebar aktif -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed top-0 left-0 z-30 h-screen w-64 bg-slate-900 text-white p-5 flex flex-col md:translate-x-0">
+        <div class="flex items-center gap-3 mb-10">
+            <img src="https://via.placeholder.com/40x40/4F46E5/FFFFFF?text=D" alt="Logo" class="w-10 h-10 rounded-lg">
+            <h1 class="text-xl font-bold">Dashboard</h1>
+        </div>
+        <nav class="flex flex-col gap-2 flex-1">
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                <span>Menu Utama</span>
+            </a>
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span>Laporan</span>
+            </a>
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                <span>Pengguna</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="md:ml-64 transition-all duration-300">
+        <!-- Topbar -->
+        <header class="bg-white shadow-sm sticky top-0 z-10">
+            <div class="flex items-center justify-between p-4">
+                <div class="flex items-center gap-4">
+                    <!-- Tombol Hamburger -->
+                    <button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-gray-100">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <h2 class="text-fluid-subtitle font-semibold">Data Transaksi</h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <img src="https://via.placeholder.com/40x40/10B981/FFFFFF?text=U" alt="User" class="w-10 h-10 rounded-full border-2 border-gray-200">
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Wrapper -->
+        <main class="p-fluid">
+            <!-- Info Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+                <div class="bg-white p-3 md:p-5 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-xs md:text-sm text-gray-500">Total Pendapatan</p>
+                    <h3 class="text-lg md:text-2xl font-bold mt-2">Rp 45,000,000</h3>
+                </div>
+                <div class="bg-white p-3 md:p-5 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-xs md:text-sm text-gray-500">Total Pengguna</p>
+                    <h3 class="text-lg md:text-2xl font-bold mt-2">1,245</h3>
+                </div>
+            </div>
+
+            <!-- Tabel / Card Section -->
+            <div class="bg-white p-fluid rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-fluid-subtitle font-bold mb-6">Riwayat Transaksi Terbaru</h3>
+                
+                <!-- Wrapper untuk Overflow Scroll di Desktop -->
+                <div class="overflow-x-auto">
+                    <table class="responsive-table w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 text-left text-sm text-gray-500">
+                                <th class="pb-3 pr-4">ID</th>
+                                <th class="pb-3 pr-4">Pengguna</th>
+                                <th class="pb-3 pr-4">Deskripsi</th>
+                                <th class="pb-3 pr-4">Status</th>
+                                <th class="pb-3 pr-4">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <!-- Baris 1 -->
+                            <tr class="border-b border-gray-100">
+                                <td data-label="ID" class="py-4 pr-4 font-medium">#TRX001</td>
+                                <td data-label="Pengguna" class="py-4 pr-4">
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://via.placeholder.com/32x32/3B82F6/FFFFFF?text=A" class="w-8 h-8 rounded-full" alt="Avatar">
+                                        <span>Budi Santoso</span>
+                                    </div>
+                                </td>
+                                <td data-label="Deskripsi" class="py-4 pr-4">
+                                    <!-- Kelas collapse-text untuk auto collapse di mobile -->
+                                    <span class="collapse-text">Pembelian paket hosting premium untuk durasi 1 tahun beserta domain .com</span>
+                                </td>
+                                <td data-label="Status" class="py-4 pr-4">
+                                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Sukses</span>
+                                </td>
+                                <td data-label="Aksi" class="py-4 pr-4">
+                                    <button class="text-indigo-600 font-semibold hover:underline">Detail</button>
+                                </td>
+                            </tr>
+
+                            <!-- Baris 2 -->
+                            <tr class="border-b border-gray-100">
+                                <td data-label="ID" class="py-4 pr-4 font-medium">#TRX002</td>
+                                <td data-label="Pengguna" class="py-4 pr-4">
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://via.placeholder.com/32x32/F43F5E/FFFFFF?text=B" class="w-8 h-8 rounded-full" alt="Avatar">
+                                        <span>Siti Aminah</span>
+                                    </div>
+                                </td>
+                                <td data-label="Deskripsi" class="py-4 pr-4">
+                                    <span class="collapse-text">Upgrade akun dari tier basic ke tier business dengan fitur tambahan</span>
+                                </td>
+                                <td data-label="Status" class="py-4 pr-4">
+                                    <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">Pending</span>
+                                </td>
+                                <td data-label="Aksi" class="py-4 pr-4">
+                                    <button class="text-indigo-600 font-semibold hover:underline">Detail</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Fungsi Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            
+            sidebar.classList.toggle('active');
+            
+            // Tampilkan overlay hanya di mobile
+            if (window.innerWidth <= 767) {
+                if (sidebar.classList.contains('active')) {
+                    overlay.classList.remove('hidden');
+                } else {
+                    overlay.classList.add('hidden');
+                }
+            }
+        }
+
+        // Reset overlay saat resize ke desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                document.getElementById('overlay').classList.add('hidden');
+                document.getElementById('sidebar').classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
