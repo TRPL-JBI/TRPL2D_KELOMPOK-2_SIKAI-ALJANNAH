@@ -180,6 +180,13 @@
             text-decoration: underline;
         }
 
+        .password-hint {
+            font-family: "Poppins", sans-serif;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
+
         /* Login Button */
         .btn-login-submit {
             font-family: "Poppins", sans-serif;
@@ -384,18 +391,14 @@
                         placeholder="Masukkan password"
                         required
                         autocomplete="current-password"
+                        minlength="8"
                     >
+                    <p class="password-hint">Minimal 8 karakter, 1 huruf kapital (A-Z), dan 1 angka (0-9)</p>
                 </div>
 
-                <!-- Remember Me -->
-                <div class="checkbox-group" style="display: flex; align-items: center; gap: 0.75rem;">
-                    <input 
-                        type="checkbox" 
-                        id="remember" 
-                        name="remember" 
-                        style="width: 18px; height: 18px; accent-color: #1E5A52; cursor: pointer;"
-                    >
-                    <label for="remember" style="font-family: 'Poppins', sans-serif; font-size: 0.9rem; color: #374151; cursor: pointer;">Ingat Saya</label>
+                <!-- Forgot Password Link -->
+                <div style="text-align: right;">
+                    <a href="{{ route('forgot-password') }}" class="forgot-password">Lupa Password?</a>
                 </div>
 
                 <!-- Login Button -->
@@ -410,5 +413,10 @@
     <!-- Footer Component -->
     <x-footer />
 
+    <script>
+        @if(session('reset_success'))
+            alert('Password Anda sudah berhasil diperbarui. Silakan login dengan password baru Anda.');
+        @endif
+    </script>
 </body>
 </html>

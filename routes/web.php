@@ -89,6 +89,10 @@ Route::middleware(['auth', 'role:sekretaris,superadmin'])->group(function () {
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
+    Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('forgot-password');
+    Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('forgot-password.send');
+    Route::get('/reset-password/{token}', [AuthController::class, 'showResetPasswordForm'])->name('reset-password');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('reset-password.do');
 });
 
 Route::middleware(['auth', 'role:logistik,superadmin'])->group(function () {

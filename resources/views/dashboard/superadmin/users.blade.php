@@ -64,7 +64,7 @@
     {{-- User Table --}}
     <x-dashboard.data-table
         title="Daftar Pengguna"
-        :headers="['Nomor', 'Nama User', 'Email', 'Role', 'Status', 'Dibuat', 'Aksi']"
+        :headers="['Nomor', 'Nama User', 'Email', 'No. WhatsApp', 'Role', 'Status', 'Dibuat', 'Aksi']"
         :paginator="$users"
         search-placeholder="Cari user..."
     >
@@ -73,6 +73,7 @@
                 <td>{{ $users->firstItem() + $index }}</td>
                 <td style="font-weight: 600; color: #1f2937;">{{ $user->nama }}</td>
                 <td style="color: #6b7280;">{{ $user->email }}</td>
+                <td style="color: #6b7280;">{{ $user->no_whatsapp ?? '-' }}</td>
                 <td>
                     @php
                         $roleBadge = match($user->role) {
@@ -100,6 +101,7 @@
                                 data-id="{{ $user->id }}"
                                 data-nama="{{ $user->nama }}"
                                 data-email="{{ $user->email }}"
+                                data-no_whatsapp="{{ $user->no_whatsapp ?? '' }}"
                                 data-role="{{ $user->role }}"
                                 data-status="{{ $user->status }}">
                             <span class="material-icons" style="font-size: 16px;">edit</span>
@@ -127,6 +129,10 @@
                     <div class="form-group">
                         <label for="tambah_email" class="form-label">Email</label>
                         <input type="email" id="tambah_email" name="email" class="form-input" required maxlength="255" placeholder="budi@company.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="tambah_no_whatsapp" class="form-label">No. WhatsApp</label>
+                        <input type="text" id="tambah_no_whatsapp" name="no_whatsapp" class="form-input" maxlength="20" placeholder="cth: 083123349370">
                     </div>
                     <div class="form-group">
                         <label for="tambah_password" class="form-label">Password</label>
@@ -181,6 +187,10 @@
                         <input type="email" id="edit_email" name="email" class="form-input" required>
                     </div>
                     <div class="form-group">
+                        <label for="edit_no_whatsapp" class="form-label">No. WhatsApp</label>
+                        <input type="text" id="edit_no_whatsapp" name="no_whatsapp" class="form-input" maxlength="20" placeholder="cth: 083123349370">
+                    </div>
+                    <div class="form-group">
                         <label for="edit_password" class="form-label">Password <span style="font-weight: 400; color: #828282; font-size: 0.8rem;">(kosongkan jika tidak diubah)</span></label>
                         <input type="password" id="edit_password" name="password" class="form-input" autocomplete="new-password">
                     </div>
@@ -217,6 +227,7 @@
         function openEditModal(button) {
             document.getElementById('edit_nama').value = button.dataset.nama;
             document.getElementById('edit_email').value = button.dataset.email;
+            document.getElementById('edit_no_whatsapp').value = button.dataset.no_whatsapp;
             document.getElementById('edit_password').value = '';
             document.getElementById('edit_role').value = button.dataset.role;
             document.getElementById('edit_status').value = button.dataset.status;

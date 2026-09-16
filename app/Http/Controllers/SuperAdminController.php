@@ -412,6 +412,7 @@ class SuperAdminController extends Controller
         $data = $request->validate([
             'nama' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $id,
+            'no_whatsapp' => 'nullable|string|max:20',
             'password' => 'nullable|string|min:8',
             'role' => 'required|in:bendahara,sekretaris,logistik,ketua,superadmin,adminweb',
             'status' => 'required|in:aktif,non_aktif',
@@ -432,6 +433,9 @@ class SuperAdminController extends Controller
         }
         if ($oldData->email !== $user->email) {
             $changes[] = "email dari '{$oldData->email}' ke '{$user->email}'";
+        }
+        if (($oldData->no_whatsapp ?? '') !== ($user->no_whatsapp ?? '')) {
+            $changes[] = "no_whatsapp dari '{$oldData->no_whatsapp}' ke '{$user->no_whatsapp}'";
         }
         if ($oldData->role !== $user->role) {
             $changes[] = "role dari '{$oldData->role}' ke '{$user->role}'";
@@ -466,6 +470,7 @@ class SuperAdminController extends Controller
         $data = $request->validate([
             'nama' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
+            'no_whatsapp' => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
             'role' => 'required|in:bendahara,sekretaris,logistik,ketua,superadmin,adminweb',
             'status' => 'required|in:aktif,non_aktif',
