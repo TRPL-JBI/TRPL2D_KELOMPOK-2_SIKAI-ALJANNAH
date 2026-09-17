@@ -6,7 +6,8 @@
     <title>@yield('title', 'Dashboard') | RKM Al-Jannah</title>
     @include('components.favicon')
     <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+    <!-- Material Icons: self-hosted for reliability (Google CDN slow/blocked in some regions) -->
+    <link rel="preload" href="{{ asset('fonts/MaterialIcons-Regular.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- <link rel="stylesheet" href="{{ asset('css/bendahara.css') }}"> -->
@@ -243,10 +244,23 @@
         }
         applyDefault();
 
-        // On resize, reset to defaults if user hasn't toggled
+        // On resize, close mobile overlay and apply defaults
         mql.addEventListener('change', function() {
-            var stored = getStored();
-            if (!stored) applyDefault();
+            document.body.classList.remove('sidebar-open');
+            applyDefault();
+        });
+
+        // Also check on window resize (fallback for simulator extensions
+        // that may not trigger matchMedia change events properly)
+        var resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                if (isMobile()) {
+                    // On mobile: close overlay if it was left open from desktop
+                    document.body.classList.remove('sidebar-open');
+                }
+            }, 100);
         });
 
         window.toggleSidebar = function() {

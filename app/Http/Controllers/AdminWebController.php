@@ -361,6 +361,7 @@ class AdminWebController extends Controller
     {
         $search = trim((string) $request->get('search'));
 
+        // Query ALL Spatie Media records (includes FileOrganisasi uploads, Post thumbnails, etc.)
         $mediaQuery = Media::whereNull('deleted_at');
 
         if ($search !== '') {
@@ -377,21 +378,27 @@ class AdminWebController extends Controller
             ->get();
 
         $items = $media->map(function (Media $file) {
-            $custom = $file->custom_properties ?? [];
-            $mime = $file->mime_type ?? '';
+            try {
+                $custom = $file->custom_properties ?? [];
+                $mime = $file->mime_type ?? '';
 
-            return [
-                'id' => $file->getKey(),
-                'name' => $file->file_name,
-                'original_name' => $file->name ?: $file->file_name,
-                'url' => $file->getUrl(),
-                'mime_type' => $mime,
-                'extension' => $file->extension ?: strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION)),
-                'is_image' => str_starts_with($mime, 'image/'),
-                'uploaded_by' => $custom['uploaded_by'] ?? ($custom['uploaded_by'] ?? null),
-                'created_at' => optional($file->created_at)->toIso8601String(),
-            ];
-        })->values();
+                return [
+                    'id' => $file->getKey(),
+                    'name' => $file->file_name,
+                    'original_name' => $file->name ?: $file->file_name,
+                    'url' => $file->getUrl(),
+                    'mime_type' => $mime,
+                    'extension' => $file->extension ?: strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION)),
+                    'is_image' => str_starts_with($mime, 'image/'),
+                    'source' => 'spatie',
+                    'uploaded_by' => $custom['uploaded_by'] ?? null,
+                    'created_at' => optional($file->created_at)->toIso8601String(),
+                ];
+            } catch (\Exception $e) {
+                \Log::warning('mediaLibrary: skipping corrupt media item #' . $file->getKey() . ': ' . $e->getMessage());
+                return null;
+            }
+        })->filter()->values();
 
         return response()->json([
             'success' => true,

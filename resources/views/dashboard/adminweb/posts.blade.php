@@ -28,6 +28,12 @@
         color: #16423c;
     }
 
+    @media (max-width: 767px) {
+        .posts-title {
+            font-size: 20px;
+        }
+    }
+
     .posts-toolbar {
         display: flex;
         align-items: center;
@@ -324,11 +330,81 @@
     }
 
     @media (max-width: 768px) {
+        .posts-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
         .posts-search {
+            width: 100%;
+        }
+        .posts-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            width: 100%;
+        }
+        .posts-toolbar .btn-posts {
+            justify-content: center;
             width: 100%;
         }
         .posts-table-wrap {
             overflow-x: auto;
+        }
+    }
+
+    /* Responsive table → card on mobile */
+    @media (max-width: 767px) {
+        .posts-table thead { display: none; }
+        .posts-table,
+        .posts-table tbody,
+        .posts-table tr,
+        .posts-table td { display: block; width: 100%; }
+
+        .posts-table tr {
+            margin-bottom: 1.25rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            background-color: #fff;
+        }
+
+        .posts-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: right;
+            border-bottom: 1px solid #f3f4f6;
+            padding: 0.75rem 0;
+            gap: 12px;
+        }
+
+        .posts-table td:last-child { border-bottom: none; }
+
+        .posts-table td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #374151;
+            text-align: left;
+            flex-shrink: 0;
+            min-width: 80px;
+        }
+
+        .posts-table td[data-label="Thumbnail"] {
+            justify-content: center;
+            padding: 0.75rem 0;
+        }
+
+        .posts-table td[data-label="Aksi"] {
+            justify-content: center;
+        }
+
+        .posts-table td[data-label="Aksi"] .posts-actions {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .posts-table td[data-label="Judul"] {
+            font-weight: 600;
         }
     }
 </style>
@@ -367,8 +443,8 @@
         <tbody>
             @forelse($posts as $post)
             <tr>
-                <td>{{ $post->created_at->format('d/m/Y') }}</td>
-                <td>
+                <td data-label="Tanggal">{{ $post->created_at->format('d/m/Y') }}</td>
+                <td data-label="Thumbnail">
                     @if($post->getThumbnailUrl())
                         <img src="{{ $post->getThumbnailUrl() }}" alt="{{ $post->title }}" class="posts-thumb">
                     @else
@@ -377,15 +453,15 @@
                         </div>
                     @endif
                 </td>
-                <td style="font-weight:600;">{{ $post->title }}</td>
-                <td>
+                <td data-label="Judul" style="font-weight:600;">{{ $post->title }}</td>
+                <td data-label="Kategori">
                     @if($post->category)
                         <span class="tag-category">{{ $post->category->name }}</span>
                     @else
                         <span style="color:#828282;font-size:12px;">-</span>
                     @endif
                 </td>
-                <td>
+                <td data-label="Aksi">
                     <div class="posts-actions">
                         <button type="button" class="btn-action btn-action-share" onclick="openShareModal({{ $post->id }}, '{{ addslashes($post->title) }}', '{{ url('/berita/' . $post->slug) }}')">
                             <span class="material-icons" style="font-size:14px;">share</span>

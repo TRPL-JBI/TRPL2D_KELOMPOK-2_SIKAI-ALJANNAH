@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $page->title }} — Page Builder | RKM Al-Jannah</title>
     <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+    <link rel="preload" href="{{ asset('fonts/MaterialIcons-Regular.woff2') }}" as="font" type="font/woff2" crossorigin>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
 :root {
@@ -1152,5 +1152,44 @@ select.prop-input{appearance:none;}
 
 })();
 </script>
+
+{{-- Mobile-only blocker --}}
+<style>
+.mobile-builder-block {
+    display: none;
+    position: fixed; inset: 0; z-index: 99999;
+    background: #f8faf8;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px;
+}
+.mobile-builder-block .icon-circle {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: #fef3cd; display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+}
+.mobile-builder-block .icon-circle .material-icons { font-size: 40px; color: #856404; }
+.mobile-builder-block h2 { font-size: 20px; font-weight: 700; color: #16423c; margin: 0 0 12px; font-family: 'Segoe UI', sans-serif; }
+.mobile-builder-block p { font-size: 15px; color: #575757; line-height: 1.6; margin: 0 0 28px; max-width: 360px; }
+.mobile-builder-block button {
+    background: #16423c; color: #fff; border: none; padding: 14px 36px;
+    border-radius: 999px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'Segoe UI', sans-serif;
+}
+@media (max-width: 767px) {
+    .mobile-builder-block { display: flex; }
+    .app-layout { display: none !important; }
+    .toolbar-left, .toolbar-right, .panels-toggle { display: none !important; }
+}
+</style>
+<div class="mobile-builder-block">
+    <div class="icon-circle">
+        <span class="material-icons">computer</span>
+    </div>
+    <h2>Maaf, Builder Hanya Untuk Desktop</h2>
+    <p>Page Builder hanya bisa digunakan di tampilan desktop. Silakan gunakan laptop atau komputer yang ada.</p>
+    <button onclick="window.location.href='/adminweb/pages'">Kembali ke Pages</button>
+</div>
 </body>
 </html>

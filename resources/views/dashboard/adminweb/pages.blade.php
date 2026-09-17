@@ -148,7 +148,6 @@
         font-weight: 700;
         padding: 2px 8px;
         border-radius: 999px;
-        text-transform: uppercase;
         letter-spacing: 0.5px;
         vertical-align: middle;
         margin-left: 6px;
@@ -246,11 +245,79 @@
     }
 
     @media (max-width: 768px) {
+        .pages-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .pages-title {
+            font-size: 20px;
+        }
         .pages-search {
+            width: 100%;
+        }
+        .pages-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            width: 100%;
+        }
+        .pages-toolbar .btn-pages {
+            justify-content: center;
             width: 100%;
         }
         .pages-table-wrap {
             overflow-x: auto;
+        }
+    }
+
+    /* Responsive table → card on mobile */
+    @media (max-width: 767px) {
+        .pages-table thead { display: none; }
+        .pages-table,
+        .pages-table tbody,
+        .pages-table tr,
+        .pages-table td { display: block; width: 100%; }
+
+        .pages-table tr {
+            margin-bottom: 1.25rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            background-color: #fff;
+        }
+
+        .pages-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: right;
+            border-bottom: 1px solid #f3f4f6;
+            padding: 0.75rem 0;
+            gap: 12px;
+        }
+
+        .pages-table td:last-child { border-bottom: none; }
+
+        .pages-table td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #374151;
+            text-align: left;
+            flex-shrink: 0;
+            min-width: 80px;
+        }
+
+        .pages-table td[data-label="Nama Halaman"] {
+            font-weight: 600;
+        }
+
+        .pages-table td[data-label="Aksi"] {
+            justify-content: center;
+        }
+
+        .pages-table td[data-label="Aksi"] .pages-actions {
+            flex-wrap: wrap;
+            justify-content: center;
         }
     }
 </style>
@@ -284,22 +351,22 @@
         <tbody>
             @forelse($pages as $page)
             <tr class="{{ $page->slug === 'beranda' ? 'row-pinned' : '' }}">
-                <td>{{ $page->created_at->format('d/m/Y') }}</td>
-                <td class="pages-title-cell">
+                <td data-label="Tanggal">{{ $page->created_at->format('d/m/Y') }}</td>
+                <td data-label="Nama Halaman" class="pages-title-cell">
                     {{ $page->title }}
                     @if($page->slug === 'beranda')
                         <span class="badge-pinned">
                             <span class="material-icons">push_pin</span>
-                            Pinned
+                            PINNED
                         </span>
                     @endif
                 </td>
-                <td>
+                <td data-label="Diperbarui">
                     <span class="pages-updated" title="{{ $page->updated_at->format('d/m/Y H:i') }}">
                         {{ $page->updated_at->locale('id')->diffForHumans() }}
                     </span>
                 </td>
-                <td>
+                <td data-label="Aksi">
                     <div class="pages-actions">
                         @if($page->slug === 'beranda')
                         <a href="{{ route('adminweb.pages.edit', $page->id) }}" class="btn-action btn-action-edit">
@@ -307,10 +374,10 @@
                             Edit
                         </a>
                         @else
-                        <a href="{{ route('adminweb.pages.builder', $page->id) }}" class="btn-action btn-action-edit">
+                        <button type="button" class="btn-action btn-action-edit" onclick="openBuilder({{ $page->id }})">
                             <span class="material-icons" style="font-size:14px;">palette</span>
                             Builder
-                        </a>
+                        </button>
                         @endif
                         <form method="POST" action="{{ route('adminweb.pages.destroy', $page->id) }}" style="display:inline;" onsubmit="return confirm('Hapus halaman ini?')">
                             @csrf
@@ -448,5 +515,26 @@
         toast.classList.add('show');
         setTimeout(function() { toast.classList.remove('show'); }, 2000);
     }
+
+    // ── Builder Mobile Block ──
+    function openBuilder(pageId) {
+        if (window.innerWidth <= 767) {
+            document.getElementById('mobileBuilderMsg').classList.add('active');
+            return;
+        }
+        window.location.href = '/adminweb/pages/' + pageId + '/builder';
+    }
 </script>
+
+{{-- Mobile-only builder warning --}}
+<div class="modal-overlay" id="mobileBuilderMsg" style="z-index:10000;">
+    <div class="modal" style="max-width:420px;text-align:center;padding:32px 28px;">
+        <div style="width:64px;height:64px;border-radius:50%;background:#fef3cd;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+            <span class="material-icons" style="font-size:32px;color:#856404;">computer</span>
+        </div>
+        <h3 style="font-size:18px;font-weight:700;color:#16423c;margin:0 0 12px;">Maaf, Builder Hanya Untuk Desktop</h3>
+        <p style="font-size:14px;color:#575757;line-height:1.6;margin:0 0 24px;">Page Builder hanya bisa digunakan di tampilan desktop. Silakan gunakan laptop atau komputer yang ada.</p>
+        <button onclick="document.getElementById('mobileBuilderMsg').classList.remove('active')" style="background:#16423c;color:#fff;border:none;padding:12px 32px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Mengerti</button>
+    </div>
+</div>
 @endsection

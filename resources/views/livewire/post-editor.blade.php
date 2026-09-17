@@ -124,6 +124,46 @@
             background: #dc3545;
         }
 
+        .cover-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .cover-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .cover-btn-upload {
+            background: #16423c;
+            color: #fff;
+        }
+
+        .cover-btn-upload:hover {
+            background: #1e5a50;
+        }
+
+        .cover-btn-library {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+
+        .cover-btn-library:hover {
+            background: #e5e7eb;
+            border-color: #9ca3af;
+        }
+
         .fi-fo-rich-editor {
             border-radius: 0 !important;
             box-shadow: none !important;
@@ -311,24 +351,68 @@
             </div>
         </div>
 
-        <div class="editor-cover-section">
+        {{-- Thumbnail section --}}
+        <div class="editor-cover-section"
+             x-data="{
+                 hasImage: {{ ($thumbnail || $thumbnailMediaUrl || ($post && $post->getThumbnailUrl())) ? 'true' : 'false' }},
+                 previewUrl: '{{ $thumbnailMediaUrl ?? (($post && $post->getThumbnailUrl()) ? $post->getThumbnailUrl() : '') }}',
+                 openLibrary() {
+                     const self = this;
+                     window.FilamentMediaLibrary.pick({
+                         title: 'Pilih Gambar Sampul',
+                         onSelect(item) {
+                             if (item.is_image) {
+                                 self.previewUrl = item.url;
+                                 self.hasImage = true;
+                             }
+                             // Dispatch event for Livewire — $wire is unreliable inside pick() callback
+                             window.dispatchEvent(new CustomEvent('thumbnail-picked-from-library', {
+                                 detail: { id: item.id, url: item.url }
+                             }));
+                         }
+                     });
+                 },
+                 init() {
+                     window.addEventListener('thumbnail-picked-from-library', (e) => {
+                         $wire.selectThumbnailFromLibrary(null, e.detail.id, e.detail.url);
+                     });
+                 }
+             }"
+        >
             <div
-                class="cover-upload {{ $thumbnail || ($post && $post->getThumbnailUrl()) ? 'has-image' : '' }}"
-                x-data
-                x-on:click="$refs.thumbnailInput.click()"
+                class="cover-upload {{ $thumbnail || $thumbnailMediaUrl || ($post && $post->getThumbnailUrl()) ? 'has-image' : '' }}"
+                x-on:click="
+                    @if (!$thumbnail && !$thumbnailMediaUrl)
+                        $refs.thumbnailInput.click()
+                    @endif
+                "
             >
                 @if ($thumbnail)
                     <img src="{{ $thumbnail->temporaryUrl() }}" alt="Preview">
-                    <button type="button" class="cover-remove" wire:click="$set('thumbnail', null)" x-on:click.stop>&times;</button>
-                @elseif ($post && ($post->getThumbnailUrl()))
+                    <button type="button" class="cover-remove" wire:click="clearThumbnailSelection" x-on:click.stop>&times;</button>
+                @elseif ($thumbnailMediaUrl)
+                    <img src="{{ $thumbnailMediaUrl }}" alt="Preview dari library">
+                    <button type="button" class="cover-remove" wire:click="clearThumbnailSelection" x-on:click.stop>&times;</button>
+                @elseif ($post && $post->getThumbnailUrl())
                     <img src="{{ $post->getThumbnailUrl() }}" alt="Current thumbnail">
                     <button type="button" class="cover-remove" wire:click="removeThumbnail" x-on:click.stop>&times;</button>
                 @else
                     <div class="cover-placeholder">
-                        <span>Upload gambar sampul (klik atau seret gambar)</span>
+                        <span>Upload gambar sampul atau pilih dari library</span>
                     </div>
                 @endif
                 <input type="file" x-ref="thumbnailInput" wire:model="thumbnail" accept="image/*" style="display:none">
+            </div>
+
+            <div class="cover-actions" @click.stop>
+                <button type="button" class="cover-btn cover-btn-upload" x-on:click="$refs.thumbnailInput.click()">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    Upload Manual
+                </button>
+                <button type="button" class="cover-btn cover-btn-library" x-on:click="openLibrary()">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    Pilih dari Library
+                </button>
             </div>
         </div>
 

@@ -168,21 +168,11 @@ body.sidebar-collapsed .main-content {
         display: inline;
     }
     .sidebar .sidebar-menu-item .menu-icon {
-        display: none;
+        display: flex;
+        margin-right: 10px;
     }
-    body.sidebar-open .sidebar {
-        transform: translateX(0);
-    }
-    .sidebar-backdrop {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.4);
-        z-index: 150;
-    }
-    body.sidebar-open .sidebar-backdrop {
-        display: block;
-    }
+
+    /* Hidden states (collapsed = default on mobile) */
     body.sidebar-collapsed .sidebar,
     body:not(.sidebar-open) .sidebar {
         width: 260px;
@@ -194,6 +184,24 @@ body.sidebar-collapsed .main-content {
     body.sidebar-collapsed .sidebar .menu-icon {
         display: none;
     }
+
+    /* Open state MUST override collapsed — higher specificity */
+    body.sidebar-open .sidebar,
+    body.sidebar-open.sidebar-collapsed .sidebar {
+        transform: translateX(0);
+    }
+
+    .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 150;
+    }
+    body.sidebar-open .sidebar-backdrop {
+        display: block;
+    }
+
     body.sidebar-collapsed .main-content,
     .main-content {
         margin-left: 0;
@@ -212,28 +220,70 @@ body.sidebar-collapsed .main-content {
     padding: 10px 0;
 }
 
-.sidebar-menu-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 20px;
-    color: rgba(255,255,255,0.8);
-    text-decoration: none;
-    transition: all 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-}
-
-.sidebar-menu-item:hover, .sidebar-menu-item.active {
-    background-color: rgba(255,255,255,0.1);
-    color: var(--white);
-}
-
 .main-content {
     flex: 1;
     margin-left: 250px;
     display: flex;
     flex-direction: column;
     min-width: 0;
+}
+
+/* Material Icons — self-hosted for reliability */
+@font-face {
+    font-family: 'Material Icons';
+    font-style: normal;
+    font-weight: 400;
+    src: url(../fonts/MaterialIcons-Regular.ttf) format('truetype');
+    font-display: swap;
+}
+
+/* Material Icons — match Google Fonts CSS exactly */
+.material-icons {
+    font-family: 'Material Icons';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    vertical-align: middle;
+}
+
+/* Mobile overrides — MUST come after base rules to win cascade */
+@media (max-width: 767px) {
+    .main-content {
+        margin-left: 0 !important;
+    }
+    .sidebar {
+        transform: translateX(-100%) !important;
+        width: 260px !important;
+    }
+    body.sidebar-open .sidebar,
+    body.sidebar-open.sidebar-collapsed .sidebar {
+        transform: translateX(0) !important;
+    }
+    body.sidebar-collapsed .sidebar .menu-label,
+    .sidebar .sidebar-menu-item .menu-label {
+        display: inline !important;
+    }
+    .sidebar .sidebar-menu-item .menu-icon {
+        display: flex !important;
+        margin-right: 10px;
+    }
+    .sidebar .sidebar-menu-item .menu-icon .material-icons {
+        font-family: 'Material Icons' !important;
+    }
+    body.sidebar-collapsed .main-content {
+        margin-left: 0 !important;
+    }
 }
 
 .navbar {
@@ -299,6 +349,18 @@ body.sidebar-collapsed .main-content {
 
 .content-wrapper {
     padding: 30px;
+}
+
+@media (max-width: 767px) {
+    .content-wrapper {
+        padding: 16px;
+    }
+    .navbar {
+        padding: 12px 16px;
+    }
+    .navbar-brand {
+        font-size: 16px;
+    }
 }
 
 .card {

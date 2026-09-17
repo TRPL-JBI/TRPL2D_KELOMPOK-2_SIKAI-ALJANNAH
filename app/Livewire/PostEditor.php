@@ -18,6 +18,7 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Log;
+use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 
 class PostEditor extends Component implements HasActions, HasForms
 {
@@ -29,6 +30,11 @@ class PostEditor extends Component implements HasActions, HasForms
     public ?Post $post = null;
     public $thumbnail = null;
 
+    /** Media library selection for thumbnail */
+    public ?string $thumbnailMediaSource = null;
+    public ?int $thumbnailSpatieMediaId = null;
+    public ?string $thumbnailMediaUrl = null;
+
     protected function rules()
     {
         return [
@@ -36,6 +42,7 @@ class PostEditor extends Component implements HasActions, HasForms
             'data.category_id' => 'nullable|exists:categories,id',
             'data.content' => 'required|string',
             'thumbnail' => 'nullable|image|max:10240',
+            'thumbnailSpatieMediaId' => 'nullable|integer',
         ];
     }
 
@@ -55,14 +62,42 @@ class PostEditor extends Component implements HasActions, HasForms
         $this->data['category_id'] = $post?->category_id ?? null;
     }
 
-    public function removeThumbnail()
+    public function selectThumbnailFromLibrary(?int $foId, ?int $spatieMediaId, ?string $url): void
     {
         $this->thumbnail = null;
+        $this->thumbnailMediaSource = 'library';
+        $this->thumbnailSpatieMediaId = $spatieMediaId;
+        $this->thumbnailMediaUrl = $url;
+    }
+
+    public function clearThumbnailSelection(): void
+    {
+        $this->thumbnail = null;
+        $this->thumbnailMediaSource = null;
+        $this->thumbnailSpatieMediaId = null;
+        $this->thumbnailMediaUrl = null;
+
         if ($this->post && $this->post->getThumbnailUrl()) {
             $this->post->clearMediaCollection('thumbnails');
         }
     }
 
+    public function removeThumbnail()
+    {
+        $this->thumbnail = null;
+        $this->thumbnailMediaSource = null;
+        $this->thumbnailSpatieMediaId = null;
+        $this->thumbnailMediaUrl = null;
+
+        if ($this->post && $this->post->getThumbnailUrl()) {
+            $this->post->clearMediaCollection('thumbnails');
+        }
+    }
+
+    /**
+     * Persist an uploaded file into FileOrganisasi (Files & Images).
+     * Used by both thumbnail uploads and the rich editor attachFiles.
+     */
     private function persistEditorAttachment(TemporaryUploadedFile $file): int
     {
         $originalName = $file->getClientOriginalName();
@@ -84,6 +119,55 @@ class PostEditor extends Component implements HasActions, HasForms
             ->toMediaCollection('uploads');
 
         return (int) $fileRecord->getFirstMedia('uploads')->id;
+    }
+
+    /**
+     * Persist a manual thumbnail upload into FileOrganisasi (Files & Images),
+     * then attach it to the Post's thumbnails collection.
+     */
+    private function persistThumbnailUpload(Post $post, TemporaryUploadedFile $file): void
+    {
+        $originalName = $file->getClientOriginalName();
+        $extension = strtolower($file->getClientOriginalExtension());
+        $kategori = in_array($extension, config('file-pemilah.diterima', []), true) ? 'diterima' : 'mencurigakan';
+
+        $fileRecord = FileOrganisasi::create([
+            'nama_file' => $originalName,
+            'file_path' => '',
+            'kategori' => $kategori,
+            'status' => 'aktif',
+            'uploaded_by' => auth()->id(),
+        ]);
+
+        $fileRecord
+            ->addMedia($file->getRealPath())
+            ->withCustomProperties(['uploaded_by' => auth()->id()])
+            ->usingFileName(FileRenamer::rename($originalName))
+            ->toMediaCollection('uploads');
+
+        // Also attach to the Post's thumbnails collection
+        $post->addMedia($file->getRealPath())
+            ->withCustomProperties(['uploaded_by' => auth()->id()])
+            ->usingFileName(FileRenamer::rename($originalName))
+            ->toMediaCollection('thumbnails');
+    }
+
+    /**
+     * Attach an existing media library item (Spatie Media) to the Post's thumbnails collection.
+     */
+    private function attachLibraryThumbnail(Post $post, ?int $spatieMediaId): void
+    {
+        if (!$spatieMediaId) {
+            return;
+        }
+
+        $spatieMedia = SpatieMedia::find($spatieMediaId);
+        if ($spatieMedia && file_exists($spatieMedia->getPath())) {
+            $post->addMedia($spatieMedia->getPath())
+                ->withCustomProperties(['uploaded_by' => auth()->id()])
+                ->usingFileName($spatieMedia->file_name)
+                ->toMediaCollection('thumbnails');
+        }
     }
 
     public function form(Schema $schema): Schema
@@ -193,14 +277,18 @@ class PostEditor extends Component implements HasActions, HasForms
         if ($this->post) {
             $this->post->update($data);
 
+            // Handle thumbnail: manual upload OR media library pick
             if ($this->thumbnail) {
                 try {
-                    $this->post->addMedia($this->thumbnail->getRealPath())
-                        ->withCustomProperties(['uploaded_by' => auth()->id()])
-                        ->usingFileName(\App\Services\FileRenamer::rename($this->thumbnail->getClientOriginalName()))
-                        ->toMediaCollection('thumbnails');
+                    $this->persistThumbnailUpload($this->post, $this->thumbnail);
                 } catch (\Exception $e) {
                     Log::warning('Thumbnail upload failed: ' . $e->getMessage());
+                }
+            } elseif ($this->thumbnailMediaSource === 'library' && $this->thumbnailSpatieMediaId) {
+                try {
+                    $this->attachLibraryThumbnail($this->post, $this->thumbnailSpatieMediaId);
+                } catch (\Exception $e) {
+                    Log::warning('Thumbnail library attach failed: ' . $e->getMessage());
                 }
             }
 
@@ -208,14 +296,18 @@ class PostEditor extends Component implements HasActions, HasForms
         } else {
             $post = Post::create($data);
 
+            // Handle thumbnail: manual upload OR media library pick
             if ($this->thumbnail) {
                 try {
-                    $post->addMedia($this->thumbnail->getRealPath())
-                        ->withCustomProperties(['uploaded_by' => auth()->id()])
-                        ->usingFileName(\App\Services\FileRenamer::rename($this->thumbnail->getClientOriginalName()))
-                        ->toMediaCollection('thumbnails');
+                    $this->persistThumbnailUpload($post, $this->thumbnail);
                 } catch (\Exception $e) {
                     Log::warning('Thumbnail upload failed: ' . $e->getMessage());
+                }
+            } elseif ($this->thumbnailMediaSource === 'library' && $this->thumbnailSpatieMediaId) {
+                try {
+                    $this->attachLibraryThumbnail($post, $this->thumbnailSpatieMediaId);
+                } catch (\Exception $e) {
+                    Log::warning('Thumbnail library attach failed: ' . $e->getMessage());
                 }
             }
 

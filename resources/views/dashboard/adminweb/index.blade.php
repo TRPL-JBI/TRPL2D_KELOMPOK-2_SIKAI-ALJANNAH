@@ -83,6 +83,18 @@
         }
     }
 
+    @media (max-width: 767px) {
+        .adminweb-card {
+            padding: 18px;
+        }
+        .adminweb-card-value {
+            font-size: 28px;
+        }
+        .adminweb-card-label {
+            font-size: 12px;
+        }
+    }
+
     @media (max-width: 600px) {
         .adminweb-cards {
             grid-template-columns: 1fr;

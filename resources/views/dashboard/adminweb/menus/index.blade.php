@@ -147,16 +147,66 @@
     .page-menus .parent-row + .child-group td { border-top: none; }
 
     @media (max-width: 768px) {
-        .page-menus .table-card { border-radius: 14px; }
-        .page-menus .table-card-wrap { overflow-x: auto; }
-        .page-menus .table-card thead th,
-        .page-menus .table-card tbody td { padding: 10px 12px; white-space: nowrap; }
-        .page-menus .table-card thead th:first-child,
-        .page-menus .table-card tbody td:first-child { padding-left: 16px; }
-        .page-menus .table-card thead th:last-child,
-        .page-menus .table-card tbody td:last-child { padding-right: 16px; }
-        .page-menus .actions { flex-direction: column; gap: 4px; }
-        .page-menus .btn-action { padding: 5px 10px; font-size: 11px; }
+        .page-menus .page-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .page-menus .page-header h1 { font-size: 20px; }
+        .page-menus .btn-tambah {
+            justify-content: center;
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .page-menus .table-card { border-radius: 14px; border: none; box-shadow: none; background: transparent; }
+        .page-menus .table-card thead { display: none; }
+        .page-menus .table-card table,
+        .page-menus .table-card tbody,
+        .page-menus .table-card tr,
+        .page-menus .table-card td { display: block; width: 100%; }
+
+        .page-menus .table-card tbody tr {
+            margin-bottom: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,.08);
+            background: #fff;
+        }
+
+        .page-menus .table-card tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: right;
+            border-bottom: 1px solid #f3f4f6;
+            padding: 0.75rem 0;
+            gap: 12px;
+        }
+        .page-menus .table-card tbody td:last-child { border-bottom: none; }
+
+        .page-menus .table-card tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #374151;
+            text-align: left;
+            flex-shrink: 0;
+            min-width: 80px;
+        }
+
+        .page-menus .table-card tbody td[data-label="Nama Menu"] { font-weight: 600; }
+        .page-menus .table-card tbody td[data-label="URL"] .menu-url { max-width: 180px; }
+        .page-menus .table-card tbody td[data-label="Aksi"] .actions { justify-content: flex-end; flex-wrap: wrap; }
+
+        .page-menus .parent-row td[data-label="Aktif"] { justify-content: space-between; }
+        .page-menus .child-group td[data-label="Aktif"] { justify-content: space-between; }
+
+        .page-menus .menu-name-child { padding-left: 0; }
+        .page-menus .menu-name-child::before,
+        .page-menus .menu-name-child::after { display: none; }
+
+        .page-menus .child-group { background: #f9fafb; border-radius: 0.75rem; }
     }
 </style>
 
@@ -183,7 +233,7 @@
                 <tbody>
                     @forelse($menus as $menu)
                     <tr class="parent-row">
-                        <td>
+                        <td data-label="Aktif">
                             <form method="POST" action="{{ route('adminweb.menus.toggle', $menu->id) }}" style="display:inline;">
                                 @csrf @method('PUT')
                                 <label class="toggle">
@@ -192,20 +242,20 @@
                                 </label>
                             </form>
                         </td>
-                        <td>
+                        <td data-label="Nama Menu">
                             <div class="menu-name">
                                 <span class="tree-badge">M</span>
                                 {{ $menu->label }}
                             </div>
                         </td>
-                        <td>
+                        <td data-label="URL">
                             @if($menu->custom_url)
                                 <span class="menu-url" title="{{ $menu->custom_url }}">{{ $menu->custom_url }}</span>
                             @else
                                 <span class="menu-url-empty">—</span>
                             @endif
                         </td>
-                        <td>
+                        <td data-label="Aksi">
                             <div class="actions">
                                 <a href="{{ route('adminweb.menus.edit', $menu->id) }}" class="btn-action btn-action-edit">
                                     <span class="material-icons" style="font-size:13px;">edit</span>
@@ -224,7 +274,7 @@
                     @if($menu->children && $menu->children->count() > 0)
                         @foreach($menu->children as $child)
                         <tr class="child-group">
-                            <td>
+                            <td data-label="Aktif">
                                 <form method="POST" action="{{ route('adminweb.menus.toggle', $child->id) }}" style="display:inline;">
                                     @csrf @method('PUT')
                                     <label class="toggle">
@@ -233,19 +283,19 @@
                                     </label>
                                 </form>
                             </td>
-                            <td>
+                            <td data-label="Nama Menu">
                                 <div class="menu-name menu-name-child">
                                     {{ $child->label }}
                                 </div>
                             </td>
-                            <td>
+                            <td data-label="URL">
                                 @if($child->custom_url)
                                     <span class="menu-url" title="{{ $child->custom_url }}">{{ $child->custom_url }}</span>
                                 @else
                                     <span class="menu-url-empty">—</span>
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Aksi">
                                 <div class="actions">
                                     <a href="{{ route('adminweb.menus.edit', $child->id) }}" class="btn-action btn-action-edit">
                                         <span class="material-icons" style="font-size:13px;">edit</span>
@@ -265,7 +315,7 @@
                     @endif
                     @empty
                     <tr>
-                        <td colspan="4">
+                        <td colspan="4" data-label="">
                             <div class="empty-state">
                                 <div class="material-icons icon">menu</div>
                                 <h3>Belum Ada Menu</h3>
