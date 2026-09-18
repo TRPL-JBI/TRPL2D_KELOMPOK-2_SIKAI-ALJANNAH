@@ -35,6 +35,12 @@ class PostEditor extends Component implements HasActions, HasForms
     public ?int $thumbnailSpatieMediaId = null;
     public ?string $thumbnailMediaUrl = null;
 
+    /** Flag: prevents double-persist when updatedThumbnail already handled the upload */
+    public bool $thumbnailPersisted = false;
+
+    /** Tracks the media ID from immediate upload, for attaching to newly created posts */
+    public ?int $pendingThumbnailMediaId = null;
+
     protected function rules()
     {
         return [
@@ -60,6 +66,41 @@ class PostEditor extends Component implements HasActions, HasForms
 
         $this->data['title'] = $post?->title ?? '';
         $this->data['category_id'] = $post?->category_id ?? null;
+    }
+
+    /**
+     * When a thumbnail file is uploaded via wire:model, persist it immediately
+     * so it appears in the media library right away.
+     */
+    public function updatedThumbnail(): void
+    {
+        if (!$this->thumbnail || !$this->thumbnail instanceof TemporaryUploadedFile) {
+            return;
+        }
+
+        // Immediately persist to FileOrganisasi + Post's thumbnails collection
+        $targetPost = $this->post ?? null;
+
+        try {
+            $mediaId = $this->persistThumbnailUploadToLibrary($this->thumbnail, $targetPost);
+            $this->thumbnailPersisted = true;
+
+            // Swap from temp file to permanent media URL so blade doesn't call temporaryUrl()
+            $persistedMedia = $mediaId ? SpatieMedia::find($mediaId) : null;
+            if ($persistedMedia) {
+                $this->thumbnailMediaUrl = $persistedMedia->getUrl();
+                $this->thumbnail = null; // Clear temp file — no longer needed
+            }
+
+            if ($mediaId && !$targetPost) {
+                // Track for attaching to newly created posts in save()
+                $this->pendingThumbnailMediaId = $mediaId;
+            }
+        } catch (\Exception $e) {
+            Log::error('Immediate thumbnail persist failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
 
     public function selectThumbnailFromLibrary(?int $foId, ?int $spatieMediaId, ?string $url): void
@@ -96,7 +137,7 @@ class PostEditor extends Component implements HasActions, HasForms
 
     /**
      * Persist an uploaded file into FileOrganisasi (Files & Images).
-     * Used by both thumbnail uploads and the rich editor attachFiles.
+     * Used by the rich editor's saveUploadedFileAttachmentUsing callback.
      */
     private function persistEditorAttachment(TemporaryUploadedFile $file): int
     {
@@ -113,7 +154,7 @@ class PostEditor extends Component implements HasActions, HasForms
         ]);
 
         $fileRecord
-            ->addMedia($file->getRealPath())
+            ->addMedia($file->getPathname())
             ->withCustomProperties(['uploaded_by' => auth()->id()])
             ->usingFileName(FileRenamer::rename($originalName))
             ->toMediaCollection('uploads');
@@ -123,14 +164,16 @@ class PostEditor extends Component implements HasActions, HasForms
 
     /**
      * Persist a manual thumbnail upload into FileOrganisasi (Files & Images),
-     * then attach it to the Post's thumbnails collection.
+     * and attach it to the Post's thumbnails collection if a Post exists.
+     * Called immediately on upload (updatedThumbnail hook) AND during save.
      */
-    private function persistThumbnailUpload(Post $post, TemporaryUploadedFile $file): void
+    private function persistThumbnailUploadToLibrary(TemporaryUploadedFile $file, ?Post $post): ?int
     {
         $originalName = $file->getClientOriginalName();
         $extension = strtolower($file->getClientOriginalExtension());
         $kategori = in_array($extension, config('file-pemilah.diterima', []), true) ? 'diterima' : 'mencurigakan';
 
+        // 1) Create FileOrganisasi record so it appears in Files & Images / media library
         $fileRecord = FileOrganisasi::create([
             'nama_file' => $originalName,
             'file_path' => '',
@@ -140,16 +183,25 @@ class PostEditor extends Component implements HasActions, HasForms
         ]);
 
         $fileRecord
-            ->addMedia($file->getRealPath())
+            ->addMedia($file->getPathname())
             ->withCustomProperties(['uploaded_by' => auth()->id()])
             ->usingFileName(FileRenamer::rename($originalName))
             ->toMediaCollection('uploads');
 
-        // Also attach to the Post's thumbnails collection
-        $post->addMedia($file->getRealPath())
-            ->withCustomProperties(['uploaded_by' => auth()->id()])
-            ->usingFileName(FileRenamer::rename($originalName))
-            ->toMediaCollection('thumbnails');
+        $spatieMedia = $fileRecord->getFirstMedia('uploads');
+        if (!$spatieMedia) {
+            return null;
+        }
+
+        // 2) Attach to the Post's thumbnails collection if Post is available
+        if ($post) {
+            $post->addMedia($spatieMedia->getPath())
+                ->withCustomProperties(['uploaded_by' => auth()->id()])
+                ->usingFileName($spatieMedia->file_name)
+                ->toMediaCollection('thumbnails');
+        }
+
+        return $spatieMedia->id;
     }
 
     /**
@@ -277,37 +329,63 @@ class PostEditor extends Component implements HasActions, HasForms
         if ($this->post) {
             $this->post->update($data);
 
-            // Handle thumbnail: manual upload OR media library pick
-            if ($this->thumbnail) {
-                try {
-                    $this->persistThumbnailUpload($this->post, $this->thumbnail);
-                } catch (\Exception $e) {
-                    Log::warning('Thumbnail upload failed: ' . $e->getMessage());
-                }
-            } elseif ($this->thumbnailMediaSource === 'library' && $this->thumbnailSpatieMediaId) {
+            // Handle thumbnail: media library pick
+            if ($this->thumbnailMediaSource === 'library' && $this->thumbnailSpatieMediaId) {
                 try {
                     $this->attachLibraryThumbnail($this->post, $this->thumbnailSpatieMediaId);
                 } catch (\Exception $e) {
-                    Log::warning('Thumbnail library attach failed: ' . $e->getMessage());
+                    Log::error('Thumbnail library attach failed: ' . $e->getMessage(), [
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                }
+            } elseif ($this->thumbnail && $this->thumbnail instanceof TemporaryUploadedFile && !$this->thumbnailPersisted) {
+                // Fallback: if updatedThumbnail didn't fire (e.g. wire:model.defer), persist now
+                try {
+                    $this->persistThumbnailUploadToLibrary($this->thumbnail, $this->post);
+                } catch (\Exception $e) {
+                    Log::error('Thumbnail upload failed: ' . $e->getMessage(), [
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                 }
             }
+            // Note: if thumbnailPersisted is true, updatedThumbnail() already attached to this post
 
             session()->flash('success', 'Postingan berhasil diperbarui.');
         } else {
             $post = Post::create($data);
 
-            // Handle thumbnail: manual upload OR media library pick
-            if ($this->thumbnail) {
-                try {
-                    $this->persistThumbnailUpload($post, $this->thumbnail);
-                } catch (\Exception $e) {
-                    Log::warning('Thumbnail upload failed: ' . $e->getMessage());
-                }
-            } elseif ($this->thumbnailMediaSource === 'library' && $this->thumbnailSpatieMediaId) {
+            // Handle thumbnail: media library pick
+            if ($this->thumbnailMediaSource === 'library' && $this->thumbnailSpatieMediaId) {
                 try {
                     $this->attachLibraryThumbnail($post, $this->thumbnailSpatieMediaId);
                 } catch (\Exception $e) {
-                    Log::warning('Thumbnail library attach failed: ' . $e->getMessage());
+                    Log::error('Thumbnail library attach failed: ' . $e->getMessage(), [
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                }
+            } elseif ($this->thumbnailPersisted && $this->pendingThumbnailMediaId) {
+                // updatedThumbnail() already persisted the file but Post didn't exist yet — attach now
+                try {
+                    $spatieMedia = SpatieMedia::find($this->pendingThumbnailMediaId);
+                    if ($spatieMedia && file_exists($spatieMedia->getPath())) {
+                        $post->addMedia($spatieMedia->getPath())
+                            ->withCustomProperties(['uploaded_by' => auth()->id()])
+                            ->usingFileName($spatieMedia->file_name)
+                            ->toMediaCollection('thumbnails');
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Pending thumbnail attach to new post failed: ' . $e->getMessage(), [
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                }
+            } elseif ($this->thumbnail && $this->thumbnail instanceof TemporaryUploadedFile && !$this->thumbnailPersisted) {
+                // Fallback: if updatedThumbnail didn't fire, persist now
+                try {
+                    $this->persistThumbnailUploadToLibrary($this->thumbnail, $post);
+                } catch (\Exception $e) {
+                    Log::error('Thumbnail upload failed: ' . $e->getMessage(), [
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                 }
             }
 
