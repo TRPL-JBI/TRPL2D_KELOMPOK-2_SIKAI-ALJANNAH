@@ -13,6 +13,10 @@ class Pengeluaran extends Model implements HasMedia
 
     protected $table = 'pengeluaran';
 
+    protected $casts = [
+        'tanggal' => 'date',
+    ];
+
     protected $fillable = [
         'tanggal',
         'kategori_pengeluaran_id',

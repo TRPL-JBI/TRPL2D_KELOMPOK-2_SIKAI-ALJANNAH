@@ -199,7 +199,7 @@ class BendaharaController extends Controller
         // Tabel Transaksi Terbaru
         $transaksiMasuk = Pemasukan::with('kategoriPemasukan')
             ->latest()->take(5)->get()->map(fn($p) => (object)[
-                'tanggal' => $p->created_at->format('d/m/Y'),
+                'tanggal' => $p->tanggal->format('d/m/Y'),
                 'keterangan' => $p->keterangan ?? $p->kategoriPemasukan?->nama ?? 'Pemasukan',
                 'jumlah' => (float) $p->jumlah,
                 'jumlah_fmt' => 'Rp ' . number_format($p->jumlah, 0, ',', '.'),
@@ -207,7 +207,7 @@ class BendaharaController extends Controller
             ]);
         $transaksiKeluar = Pengeluaran::with('kategoriPengeluaran')
             ->latest()->take(5)->get()->map(fn($p) => (object)[
-                'tanggal' => $p->created_at->format('d/m/Y'),
+                'tanggal' => $p->tanggal->format('d/m/Y'),
                 'keterangan' => $p->keterangan ?? $p->kategoriPengeluaran?->nama ?? 'Pengeluaran',
                 'jumlah' => (float) $p->jumlah,
                 'jumlah_fmt' => 'Rp ' . number_format($p->jumlah, 0, ',', '.'),
@@ -533,7 +533,7 @@ class BendaharaController extends Controller
         $pemasukanData = $tipe !== 'pengeluaran' ? $queryPemasukan->get()->map(fn($p) => [
             'id' => $p->id,
             'tipe' => 'Pemasukan',
-            'tanggal' => $p->created_at->format('d/m/Y'),
+            'tanggal' => $p->tanggal->format('d/m/Y'),
             'jumlah' => $p->jumlah,
             'kategori' => $p->kategoriPemasukan?->nama ?? '-',
             'keterangan' => $p->keterangan ?? '-',
@@ -544,7 +544,7 @@ class BendaharaController extends Controller
         $pengeluaranData = $tipe !== 'pemasukan' ? $queryPengeluaran->get()->map(fn($p) => [
             'id' => $p->id,
             'tipe' => 'Pengeluaran',
-            'tanggal' => $p->created_at->format('d/m/Y'),
+            'tanggal' => $p->tanggal->format('d/m/Y'),
             'jumlah' => $p->jumlah,
             'kategori' => $p->kategoriPengeluaran?->nama ?? '-',
             'keterangan' => $p->keterangan ?? '-',
@@ -632,7 +632,7 @@ class BendaharaController extends Controller
 
             $pesan = 'Pembayaran *' . $peruntukan . "* telah dicatat:\n\n"
                 . '• Nominal: Rp ' . number_format($model->jumlah, 0, ',', '.') . "\n"
-                . '• Tanggal: ' . $model->created_at->format('d/m/Y') . "\n\n"
+                . '• Tanggal: ' . $model->tanggal->format('d/m/Y') . "\n\n"
                 . "Terlampir kwitansi pembayaran.\n\n"
                 . 'Terima kasih 🙏' . "\n"
                 . '— Bendahara RKM Al-Jannah';
@@ -642,7 +642,7 @@ class BendaharaController extends Controller
                 'nama' => $namaPenerima,
                 'peruntukan' => $peruntukan,
                 'nominal' => $model->jumlah,
-                'tanggal' => $model->created_at->format('d/m/Y'),
+                'tanggal' => $model->tanggal->format('d/m/Y'),
                 'dibayar_oleh' => auth()->user()->nama ?? 'Bendahara',
             ]);
 
@@ -656,7 +656,7 @@ class BendaharaController extends Controller
             'data' => [
                 'id' => $model->id,
                 'tipe' => $validated['tipe'] === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran',
-                'tanggal' => $model->created_at->format('d/m/Y'),
+                'tanggal' => $model->tanggal->format('d/m/Y'),
                 'jumlah' => $model->jumlah,
                 'kategori' => $kategori,
                 'keterangan' => $model->keterangan ?? '-',
@@ -717,7 +717,7 @@ class BendaharaController extends Controller
             'success' => true,
             'data' => [
                 'id' => $pemasukan->id,
-                'tanggal' => $pemasukan->created_at->format('d/m/Y'),
+                'tanggal' => $pemasukan->tanggal->format('d/m/Y'),
                 'jumlah' => $pemasukan->jumlah,
                 'kategori' => $pemasukan->kategoriPemasukan?->nama ?? '-',
                 'keterangan' => $pemasukan->keterangan ?? '-',
@@ -758,7 +758,7 @@ class BendaharaController extends Controller
             'success' => true,
             'data' => [
                 'id' => $pengeluaran->id,
-                'tanggal' => $pengeluaran->created_at->format('d/m/Y'),
+                'tanggal' => $pengeluaran->tanggal->format('d/m/Y'),
                 'jumlah' => $pengeluaran->jumlah,
                 'kategori' => $pengeluaran->kategoriPengeluaran?->nama ?? '-',
                 'keterangan' => $pengeluaran->keterangan ?? '-',
@@ -1709,10 +1709,9 @@ class BendaharaController extends Controller
         }
 
         $filename = 'data-transaksi-' . now()->format('Y-m-d') . '.xlsx';
-        $tempPath = storage_path('app/' . $filename);
 
         $writer = new Writer();
-        $writer->openToFile($tempPath);
+        $writer->openToBrowser($filename);
 
         $writer->addRow(Row::fromValues(['Data Transaksi', now()->format('d-m-Y'), '', '', '']));
         $writer->addRow(Row::fromValues(['Tanggal', 'Tipe', 'Kategori', 'Nominal', 'Keterangan']));
@@ -1739,13 +1738,7 @@ class BendaharaController extends Controller
         $writer->addRow(Row::fromValues(['Saldo', '', '', 'Rp ' . number_format($totalPemasukan - $totalPengeluaran, 0, ',', '.'), '']));
 
         $writer->close();
-
-        $headers = [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
-
-        return response()->file($tempPath, $headers)->deleteFileAfterSend(true);
+        exit;
     }
 
     // ---------------------------------------------------------------

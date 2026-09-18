@@ -14,6 +14,10 @@ class Pemasukan extends Model implements HasMedia
 
     protected $table = 'pemasukan';
 
+    protected $casts = [
+        'tanggal' => 'date',
+    ];
+
     protected $fillable = [
         'tanggal',
         'kategori_pemasukan_id',
