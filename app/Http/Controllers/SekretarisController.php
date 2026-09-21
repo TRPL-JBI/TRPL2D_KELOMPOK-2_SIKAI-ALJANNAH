@@ -89,6 +89,46 @@ class SekretarisController extends Controller
         return back()->with('success', $msg);
     }
 
+    public function tolak(Request $request, $id)
+    {
+        $calon = CalonAnggota::findOrFail($id);
+
+        if ($calon->status !== 'menunggu_verifikasi') {
+            return back()->with('error', 'Calon anggota tidak dalam status menunggu verifikasi.');
+        }
+
+        $request->validate([
+            'alasan_penolakan' => 'required|string|max:500',
+        ], [
+            'alasan_penolakan.required' => 'Alasan penolakan wajib diisi.',
+        ]);
+
+        $calon->update([
+            'status' => 'ditolak',
+            'alasan_penolakan' => $request->input('alasan_penolakan'),
+        ]);
+
+        LogAktivitas::create([
+            'user_id' => Auth::id(),
+            'aksi' => 'penolakan',
+            'deskripsi' => "Menolak calon anggota {$calon->nama} — alasan: {$request->input('alasan_penolakan')}",
+            'modul' => 'Sekretaris',
+            'referensi_id' => $calon->id,
+        ]);
+
+        // Kirim WA ke calon anggota (info ditolak + alasan)
+        $waResult = $this->waNotification->notifyCalonDitolak($calon, $request->input('alasan_penolakan'));
+
+        $msg = "Calon anggota {$calon->nama} ditolak.";
+        if ($waResult['success'] ?? false) {
+            $msg .= ' Pesan penolakan terkirim via WhatsApp.';
+        } else {
+            $msg .= ' Gagal mengirim pesan WhatsApp.';
+        }
+
+        return back()->with('success', $msg);
+    }
+
     public function log(Request $request)
     {
         $search = $request->get('search');

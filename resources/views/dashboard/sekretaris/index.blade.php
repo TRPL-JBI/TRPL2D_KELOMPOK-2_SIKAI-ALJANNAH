@@ -252,6 +252,10 @@
                                                     Verifikasi & Kirim WA
                                                 </button>
                                             </form>
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="openTolakModal('{{ $calon->id }}', '{{ $calon->nama }}')">
+                                                <span class="material-icons">cancel</span>
+                                                Tolak
+                                            </button>
                                         @elseif($calon->status === 'dalam_pembayaran')
                                             <span class="badge-new badge-info" style="font-size: 10px; padding: 6px 10px;">
                                                 <span class="material-icons" style="font-size: 14px;">hourglass_top</span>
@@ -304,10 +308,60 @@
             </div>
         </section>
     </div>
+
+    <!-- Tolak Modal -->
+    <div id="modalTolak" class="modal-overlay">
+        <div class="modal-bg" onclick="closeTolakModal()"></div>
+        <div style="background:#fff;border-radius:16px;max-width:440px;width:calc(100% - 32px);max-height:85vh;overflow-y:auto;padding:28px 24px 20px;box-sizing:border-box;position:relative;z-index:1;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:#fee2e2;display:flex;align-items:center;justify-content:center;">
+                    <span class="material-icons" style="color:#991b1b;font-size:22px;">cancel</span>
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:16px;">Tolak Pendaftaran</h3>
+                    <p id="tolakNama" style="margin:0;font-size:12px;color:#6b7280;"></p>
+                </div>
+            </div>
+            <p style="font-size:13px;color:#374151;margin:0 0 14px;line-height:1.5;">
+                Calon anggota akan menerima pesan WhatsApp berisi alasan penolakan. Pastikan alasan sudah jelas dan tepat.
+            </p>
+            <form id="formTolak" method="POST" style="margin:0;">
+                @csrf
+                <input type="hidden" id="tolakId" name="" value="">
+                <div style="margin-bottom:14px;">
+                    <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;">Alasan Penolakan <span style="color:#dc2626;">*</span></label>
+                    <textarea id="alasanPenolakan" name="alasan_penolakan" rows="4" required
+                        placeholder="Tuliskan alasan penolakan..."
+                        style="width:100%;padding:11px 14px;border:1.5px solid #d1d5db;border-radius:10px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;resize:vertical;min-height:80px;box-sizing:border-box;"></textarea>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:12px;border-top:1px solid #f3f4f6;">
+                    <button type="button" onclick="closeTolakModal()" style="padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;font-family:'Poppins',sans-serif;border:none;cursor:pointer;background:#f3f4f6;color:#374151;">Batal</button>
+                    <button type="submit" style="padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;font-family:'Poppins',sans-serif;border:none;cursor:pointer;background:#dc2626;color:#fff;display:inline-flex;align-items:center;gap:6px;" onclick="return confirm('Yakin ingin menolak pendaftaran ini? Pesan WA akan dikirim ke yang bersangkutan.');">
+                        <span class="material-icons" style="font-size:16px;">send</span>
+                        Tolak & Kirim WA
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
     <script>
+        /* ── Tolak Modal ── */
+        function openTolakModal(id, nama) {
+            document.getElementById('tolakId').value = id;
+            document.getElementById('tolakNama').textContent = 'Menolak: ' + nama;
+            document.getElementById('alasanPenolakan').value = '';
+            var form = document.getElementById('formTolak');
+            form.action = '/sekretaris/' + id + '/tolak';
+            document.getElementById('modalTolak').classList.add('active');
+        }
+
+        function closeTolakModal() {
+            document.getElementById('modalTolak').classList.remove('active');
+        }
+
         function filterTable() {
             const searchValue = document.getElementById('searchInput').value.toLowerCase();
             const filterBayar = document.getElementById('filterBayar').value;

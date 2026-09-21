@@ -132,6 +132,46 @@ class WhatsAppNotificationService
     }
 
     // ----------------------------------------------------------------
+    //  3. Sekretaris menolak calon anggota
+    //     → WA ke calon anggota (info ditolak + alasan)
+    // ----------------------------------------------------------------
+
+    /**
+     * Kirim notifikasi ke calon anggota bahwa pendaftaran ditolak beserta alasan.
+     */
+    public function notifyCalonDitolak(CalonAnggota $calon, string $alasan): array
+    {
+        if (! $this->whatsapp->isReady()) {
+            return ['success' => false, 'reason' => 'whatsapp_not_ready'];
+        }
+
+        if (empty($calon->telepon)) {
+            return ['success' => false, 'reason' => 'no_phone'];
+        }
+
+        $pesan = "Assalamu'alaikum *{$calon->nama}*,\n\n"
+            . "Mohon maaf, pendaftaran Anda sebagai calon anggota RKM Al-Jannah *TIDAK DAPAT DIPROSES*.\n\n"
+            . "Alasan:\n*{$alasan}*\n\n"
+            . "Anda dipersilakan untuk mendaftar kembali apabila syarat dan ketentuan sudah terpenuhi.\n\n"
+            . "Terima kasih atas pengertian Anda.\n"
+            . "Wassalamu'alaikum warahmatullahi wabarakatuh.";
+
+        $result = $this->whatsapp->send($calon->telepon, $pesan);
+
+        if (isset($result['error'])) {
+            Log::warning('WA notifikasi calon ditolak gagal: ' . $result['error'], [
+                'calon' => $calon->nama,
+                'telepon' => $calon->telepon,
+            ]);
+        }
+
+        return [
+            'success' => ! isset($result['error']),
+            'error' => $result['error'] ?? null,
+        ];
+    }
+
+    // ----------------------------------------------------------------
     //  Helpers
     // ----------------------------------------------------------------
 

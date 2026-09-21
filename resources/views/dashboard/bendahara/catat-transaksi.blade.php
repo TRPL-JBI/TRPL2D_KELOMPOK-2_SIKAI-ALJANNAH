@@ -222,36 +222,67 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    /* ═══ 2-Step Transaksi Modal ═══ */
+    var _txSelectedType = null;
+
     function openModalTransaksi() {
         enableBtn();
+        _txSelectedType = null;
         document.getElementById('modalTransaksi').classList.add('active');
-        document.getElementById('formTipe').value = 'pemasukan';
+        txShowStep(1);
+        // Reset step1 selection
+        var btns = document.querySelectorAll('#txStep1 .tx-type-btn');
+        btns.forEach(function(b) { b.classList.remove('selected'); });
+        document.getElementById('txConfirmBtn').disabled = true;
+        // Reset step2 fields
         document.getElementById('formTanggal').value = '';
         document.getElementById('formKategori').innerHTML = '<option value="">Pilih kategori</option>';
         document.getElementById('formNominal').value = '';
         document.getElementById('formKeterangan').value = '';
         document.getElementById('formWaNama').value = '';
         document.getElementById('formWaPenerima').value = '';
-        document.querySelector('#modalTransaksi .upload-placeholder').textContent = 'Upload here...';
-        toggleKategori('pemasukan');
+        var fp = document.querySelector('#txStep2 .tx-file-upload .upload-placeholder');
+        if (fp) fp.textContent = 'Pilih file bukti transaksi';
     }
 
     function closeModalTransaksi() {
         document.getElementById('modalTransaksi').classList.remove('active');
+        _txSelectedType = null;
     }
 
-    function toggleKategori(tipe) {
+    function txShowStep(n) {
+        document.getElementById('txStep1').classList.toggle('active', n === 1);
+        document.getElementById('txStep2').classList.toggle('active', n === 2);
+    }
+
+    function txSelectType(tipe, el) {
+        _txSelectedType = tipe;
+        var btns = document.querySelectorAll('#txStep1 .tx-type-btn');
+        btns.forEach(function(b) { b.classList.remove('selected'); });
+        el.classList.add('selected');
+        document.getElementById('txConfirmBtn').disabled = false;
+    }
+
+    function txGoStep2() {
+        if (!_txSelectedType) return;
+        // Set title
+        var isPemasukan = _txSelectedType === 'pemasukan';
+        document.getElementById('txFormTitle').textContent = isPemasukan ? 'Pemasukan Baru' : 'Pengeluaran Baru';
+        // Toggle WA fields
+        document.getElementById('waFieldsGroup').style.display = isPemasukan ? 'block' : 'none';
+        // Populate kategori
         var sel = document.getElementById('formKategori');
-        var opts = tipe === 'pemasukan' ? (window._kategoriPemasukan || []) : (window._kategoriPengeluaran || []);
+        var opts = isPemasukan ? (window._kategoriPemasukan || []) : (window._kategoriPengeluaran || []);
         sel.innerHTML = '<option value="">Pilih kategori</option>';
         for (var i = 0; i < opts.length; i++) {
             sel.innerHTML += '<option value="' + opts[i].id + '">' + opts[i].nama + '</option>';
         }
+        txShowStep(2);
     }
 
-    document.addEventListener('change', function(e) {
-        if (e.target.id === 'formTipe') toggleKategori(e.target.value);
-    });
+    function txBackStep1() {
+        txShowStep(1);
+    }
 
     function showTransaksiToast(msg) {
         var el = document.getElementById('toastSuccessMsg');
@@ -264,13 +295,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function simpanTransaksi() {
         var btn = window._loadingBtn;
-        var tipe = document.getElementById('formTipe').value;
+        var tipe = _txSelectedType;
         var tanggal = document.getElementById('formTanggal').value;
         var kategori = document.getElementById('formKategori').value;
         var nominal = document.getElementById('formNominal').value;
         var keterangan = document.getElementById('formKeterangan').value;
-        var file = document.querySelector('#modalTransaksi .file-upload input[type=file]');
+        var file = document.querySelector('#txStep2 input[type=file]');
 
+        if (!tipe) { enableBtn(btn); alert('Pilih tipe transaksi.'); return; }
         if (!tanggal || !kategori || !nominal) { enableBtn(btn); alert('Harap isi tanggal, kategori, dan nominal.'); return; }
         if (!file || !file.files[0]) { enableBtn(btn); alert('Harap upload bukti transaksi.'); return; }
 
@@ -280,8 +312,10 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('kategori_id', kategori);
         formData.append('jumlah', nominal.replace(/[^0-9]/g, ''));
         formData.append('keterangan', keterangan);
-        formData.append('wa_nama', document.getElementById('formWaNama').value.trim());
-        formData.append('wa_penerima', document.getElementById('formWaPenerima').value.trim());
+        if (tipe === 'pemasukan') {
+            formData.append('wa_nama', document.getElementById('formWaNama').value.trim());
+            formData.append('wa_penerima', document.getElementById('formWaPenerima').value.trim());
+        }
         formData.append('file_bukti', file.files[0]);
 
         fetchAPI('/bendahara/catat-transaksi', {
@@ -517,68 +551,174 @@ document.addEventListener('DOMContentLoaded', function() {
 @endsection
 
 @push('modals')
+<style>
+/* ── Transaksi modal 2-step ──────────────────────────────────────── */
+.tx-step { display: none; }
+.tx-step.active { display: block; }
+.tx-step-choose { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 8px 0 4px; }
+.tx-type-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 24px 16px; border-radius: 16px; border: 2px solid #e5e7eb;
+    background: #fff; cursor: pointer; transition: all .2s; font-family: 'Poppins', sans-serif;
+}
+.tx-type-btn:hover { border-color: var(--primary-400); background: #f0fdf4; }
+.tx-type-btn.selected { border-color: var(--primary-500); background: #ecfdf5; box-shadow: 0 0 0 3px rgba(16,185,129,.15); }
+.tx-type-btn .tx-icon {
+    width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+}
+.tx-type-btn .tx-icon.income { background: #d1fae5; color: #065f46; }
+.tx-type-btn .tx-icon.expense { background: #fee2e2; color: #991b1b; }
+.tx-type-btn .tx-label { font-size: 14px; font-weight: 600; color: #1f2937; }
+.tx-type-btn .tx-desc { font-size: 11px; color: #9ca3af; text-align: center; line-height: 1.4; }
+.tx-confirm-row { display: flex; justify-content: flex-end; gap: 10px; padding-top: 8px; }
+
+.tx-form-group { margin-bottom: 14px; }
+.tx-form-group label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+.tx-form-input {
+    width: 100%; padding: 11px 14px; border: 1.5px solid #d1d5db; border-radius: 10px;
+    font-size: 14px; font-family: 'Poppins', sans-serif; outline: none; box-sizing: border-box;
+    background: #fff; color: #1f2937; transition: border-color .2s;
+}
+.tx-form-input:focus { border-color: var(--primary-400); }
+.tx-form-input::placeholder { color: #c0c4cc; }
+textarea.tx-form-input { resize: vertical; min-height: 72px; }
+select.tx-form-input { appearance: auto; }
+.tx-form-hint { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+
+.tx-file-upload {
+    width: 100%; padding: 14px; border: 1.5px dashed #d1d5db; border-radius: 10px;
+    text-align: center; cursor: pointer; transition: border-color .2s; box-sizing: border-box;
+}
+.tx-file-upload:hover { border-color: var(--primary-400); }
+
+.tx-modal-box {
+    max-width: 520px; width: calc(100% - 32px); max-height: 90vh; overflow-y: auto;
+    padding: 28px 24px 20px; box-sizing: border-box;
+}
+.tx-modal-actions {
+    display: flex; gap: 10px; justify-content: flex-end; padding-top: 16px;
+    border-top: 1px solid #f3f4f6; margin-top: 8px; position: sticky; bottom: -28px;
+    background: #fff; padding-bottom: 4px;
+}
+.tx-btn {
+    padding: 10px 24px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    font-family: 'Poppins', sans-serif; border: none; cursor: pointer; transition: all .15s;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.tx-btn-secondary { background: #f3f4f6; color: #374151; }
+.tx-btn-secondary:hover { background: #e5e7eb; }
+.tx-btn-primary { background: var(--primary-500); color: #fff; }
+.tx-btn-primary:hover { background: var(--primary-600); }
+.tx-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.tx-back-btn {
+    background: none; border: none; cursor: pointer; color: #6b7280; padding: 4px;
+    display: inline-flex; align-items: center; font-size: 13px; gap: 2px; font-family: 'Poppins', sans-serif;
+}
+.tx-back-btn:hover { color: #374151; }
+
+@media (max-width: 480px) {
+    .tx-modal-box { padding: 20px 16px 16px; border-radius: 16px 16px 0 0; width: 100%; max-width: 100%; max-height: 88vh; }
+    .tx-step-choose { gap: 10px; }
+    .tx-type-btn { padding: 18px 12px; }
+    .tx-type-btn .tx-icon { width: 44px; height: 44px; border-radius: 12px; }
+    .tx-modal-actions { gap: 8px; }
+    .tx-btn { padding: 10px 18px; font-size: 13px; }
+}
+</style>
+
 <div id="modalTransaksi" class="modal-overlay">
     <div class="modal-bg"></div>
-    <div class="modal-box" style="max-width:520px;">
-        <div class="modal-icon">
-            <span class="material-icons">receipt_long</span>
+    <div class="tx-modal-box modal-box">
+
+        {{-- ═══ STEP 1: Pilih Tipe ═══ --}}
+        <div id="txStep1" class="tx-step active">
+            <h3 style="text-align:center;margin:0 0 4px;font-size:17px;">Tambah Transaksi</h3>
+            <p style="text-align:center;font-size:12px;color:#9ca3af;margin:0 0 16px;">Pilih jenis transaksi yang ingin dicatat</p>
+            <div class="tx-step-choose">
+                <button type="button" class="tx-type-btn" onclick="txSelectType('pemasukan', this)">
+                    <div class="tx-icon income"><span class="material-icons" style="font-size:26px;">add_circle</span></div>
+                    <div class="tx-label">Pemasukan</div>
+                    <div class="tx-desc">Kwitansi & notifikasi WA otomatis</div>
+                </button>
+                <button type="button" class="tx-type-btn" onclick="txSelectType('pengeluaran', this)">
+                    <div class="tx-icon expense"><span class="material-icons" style="font-size:26px;">remove_circle</span></div>
+                    <div class="tx-label">Pengeluaran</div>
+                    <div class="tx-desc">Catat pengeluaran organisasi</div>
+                </button>
+            </div>
+            <div class="tx-confirm-row">
+                <button class="tx-btn tx-btn-secondary" onclick="closeModalTransaksi()">Batal</button>
+                <button class="tx-btn tx-btn-primary" id="txConfirmBtn" disabled onclick="txGoStep2()">
+                    Lanjut
+                    <span class="material-icons" style="font-size:16px;">arrow_forward</span>
+                </button>
+            </div>
         </div>
-        <h3>Tambah Transaksi Baru</h3>
-        <div class="form-group" style="margin-bottom:12px;">
-            <label>Tipe Transaksi</label>
-            <select id="formTipe" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;appearance:auto;">
-                <option value="pemasukan">Pemasukan</option>
-                <option value="pengeluaran">Pengeluaran</option>
-            </select>
-        </div>
-        <div class="form-group" style="margin-bottom:12px;">
-            <label>Tanggal</label>
-            <input type="date" id="formTanggal" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;">
-        </div>
-        <div class="form-group" style="margin-bottom:12px;">
-            <label>Kategori</label>
-            <div class="select-wrap">
-                <select id="formKategori" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;background:#fff;appearance:auto;">
+
+        {{-- ═══ STEP 2: Form Isian ═══ --}}
+        <div id="txStep2" class="tx-step">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                <button type="button" class="tx-back-btn" onclick="txBackStep1()">
+                    <span class="material-icons" style="font-size:20px;">arrow_back</span>
+                    Kembali
+                </button>
+                <h3 id="txFormTitle" style="margin:0;font-size:17px;flex:1;">Form Transaksi</h3>
+            </div>
+
+            <div class="tx-form-group">
+                <label>Tanggal</label>
+                <input type="date" id="formTanggal" class="tx-form-input">
+            </div>
+            <div class="tx-form-group">
+                <label>Kategori</label>
+                <select id="formKategori" class="tx-form-input">
                     <option value="">Pilih kategori</option>
                 </select>
-                <span class="material-icons dropdown-icon">expand_more</span>
             </div>
-        </div>
-        <div class="form-group" style="margin-bottom:12px;">
-            <label>Nominal</label>
-            <div class="input-prefix">
-                <span class="prefix">Rp</span>
-                <input type="text" id="formNominal" placeholder="" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;">
-                <span class="suffix">.00</span>
-            </div>
-        </div>
-        <div class="form-group" style="margin-bottom:12px;">
-            <label>Keterangan</label>
-            <textarea id="formKeterangan" placeholder="Tulis keterangan transaksi..." style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;resize:vertical;min-height:80px;box-sizing:border-box;"></textarea>
-        </div>
-        <div class="form-group" style="margin-bottom:12px;">
-            <label>Nama Penerima Kwitansi (opsional)</label>
-            <input type="text" id="formWaNama" placeholder="Contoh: Budi Santoso" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;">
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Isi bersama No. WhatsApp untuk mengirim kwitansi pembayaran.</div>
-        </div>
-        <div class="form-group" style="margin-bottom:18px;">
-            <label>No. WhatsApp Penerima Kwitansi (opsional)</label>
-            <input type="text" id="formWaPenerima" placeholder="Contoh: 6281234567890 (tanpa 0 di depan)" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;">
-        </div>
-        <div class="form-group" style="margin-bottom:18px;">
-            <label>Upload Bukti Transaksi</label>
-            <div class="file-upload" onclick="this.querySelector('input').click();" style="width:100%;padding:12px 16px;border:1px dashed #d1d5db;border-radius:8px;text-align:center;cursor:pointer;box-sizing:border-box;">
-                <input type="file" required onchange="this.parentElement.querySelector('.upload-placeholder').textContent = this.files[0].name;" style="display:none;">
-                <span class="upload-placeholder" style="font-size:13px;color:#9ca3af;">Upload here...</span>
-                <div class="upload-icon">
-                    <span class="material-icons" style="font-size:18px;vertical-align:middle;color:#6b7280;">cloud_upload</span>
+            <div class="tx-form-group">
+                <label>Nominal</label>
+                <div style="position:relative;">
+                    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;color:#9ca3af;font-weight:600;">Rp</span>
+                    <input type="text" id="formNominal" class="tx-form-input" style="padding-left:36px;" placeholder="0">
                 </div>
             </div>
+            <div class="tx-form-group">
+                <label>Keterangan</label>
+                <textarea id="formKeterangan" class="tx-form-input" placeholder="Tulis keterangan..."></textarea>
+            </div>
+
+            {{-- WA fields: hanya untuk pemasukan --}}
+            <div id="waFieldsGroup">
+                <div class="tx-form-group">
+                    <label>Nama Penerima Kwitansi <span style="font-weight:400;color:#9ca3af;">(opsional)</span></label>
+                    <input type="text" id="formWaNama" class="tx-form-input" placeholder="Budi Santoso">
+                </div>
+                <div class="tx-form-group">
+                    <label>No. WhatsApp <span style="font-weight:400;color:#9ca3af;">(opsional)</span></label>
+                    <input type="text" id="formWaPenerima" class="tx-form-input" placeholder="6281234567890">
+                    <div class="tx-form-hint">Tanpa 0 di depan. Kwitansi PDF akan dikirim otomatis.</div>
+                </div>
+            </div>
+
+            <div class="tx-form-group">
+                <label>Upload Bukti <span style="font-weight:400;color:#dc2626;">*</span></label>
+                <div class="tx-file-upload" onclick="this.querySelector('input').click();">
+                    <input type="file" required onchange="this.parentElement.querySelector('.upload-placeholder').textContent = this.files[0].name;" style="display:none;">
+                    <span class="material-icons" style="font-size:22px;color:#d1d5db;display:block;margin-bottom:4px;">cloud_upload</span>
+                    <span class="upload-placeholder" style="font-size:13px;color:#9ca3af;">Pilih file bukti transaksi</span>
+                </div>
+            </div>
+
+            <div class="tx-modal-actions">
+                <button class="tx-btn tx-btn-secondary" onclick="closeModalTransaksi()">Batal</button>
+                <button class="tx-btn tx-btn-primary" data-loading onclick="simpanTransaksi()">
+                    <span class="material-icons" style="font-size:16px;">save</span>
+                    Simpan
+                </button>
+            </div>
         </div>
-        <div class="modal-actions">
-            <button class="btn-batal" onclick="closeModalTransaksi()">Batal</button>
-            <button class="btn-minta" data-loading onclick="simpanTransaksi()">Simpan</button>
-        </div>
+
     </div>
 </div>
 

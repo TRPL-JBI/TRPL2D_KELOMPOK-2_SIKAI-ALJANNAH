@@ -22,6 +22,7 @@ class CalonAnggota extends Model
         'kelurahan',
         'status',
         'anggota_id',
+        'alasan_penolakan',
     ];
 
     public function anggota(): BelongsTo
