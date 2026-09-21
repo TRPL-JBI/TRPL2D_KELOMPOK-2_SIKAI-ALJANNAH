@@ -65,7 +65,6 @@ Route::prefix('anggota')->group(function () {
 Route::middleware(['auth', 'role:sekretaris,superadmin'])->group(function () {
     Route::get('/sekretaris', [SekretarisController::class, 'index'])->name('sekretaris.dashboard');
     Route::post('/sekretaris/{id}/verifikasi', [SekretarisController::class, 'verifikasi'])->name('sekretaris.verifikasi');
-    Route::post('/sekretaris/{id}/kirim-wa', [SekretarisController::class, 'kirimWa'])->name('sekretaris.kirim-wa');
 
     Route::get('/sekretaris/anggota', [SekretarisController::class, 'anggota'])->name('sekretaris.anggota');
     Route::post('/sekretaris/anggota/import', [SekretarisController::class, 'importAnggota'])->name('sekretaris.anggota.import');

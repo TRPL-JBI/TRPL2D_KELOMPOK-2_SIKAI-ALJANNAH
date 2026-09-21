@@ -85,7 +85,7 @@
                 <div class="stat-card-label">Menunggu Verifikasi</div>
                 <div class="stat-card-trend" style="background-color: rgba(255, 187, 0, 0.1); color: #ffbb00;">
                     <span class="material-icons">remove</span>
-                    {{ $sudahMembayar }} sudah bayar
+                    {{ $dalamPembayaran }} dalam pembayaran
                 </div>
             </div>
 
@@ -153,7 +153,7 @@
                 </div>
                 <div>
                     <div class="quick-stat-value">{{ $menungguVerifikasi }}</div>
-                    <div class="quick-stat-label">Pendaftar Bulan Ini</div>
+                    <div class="quick-stat-label">Menunggu Verifikasi</div>
                 </div>
             </div>
             <div class="quick-stat">
@@ -161,8 +161,8 @@
                     <span class="material-icons">check_circle</span>
                 </div>
                 <div>
-                    <div class="quick-stat-value">{{ $sudahMembayar }}</div>
-                    <div class="quick-stat-label">Sudah Membayar</div>
+                    <div class="quick-stat-value">{{ $dalamPembayaran }}</div>
+                    <div class="quick-stat-label">Dalam Pembayaran</div>
                 </div>
             </div>
             <div class="quick-stat">
@@ -170,8 +170,8 @@
                     <span class="material-icons">balance</span>
                 </div>
                 <div>
-                    <div class="quick-stat-value">{{ $menungguVerifikasi > 0 ? round(($sudahMembayar / $menungguVerifikasi) * 100) : 0 }}%</div>
-                    <div class="quick-stat-label">Rasio Bayar vs Daftar</div>
+                    <div class="quick-stat-value">{{ $belumBayar }}</div>
+                    <div class="quick-stat-label">Belum Diverifikasi</div>
                 </div>
             </div>
         </section>
@@ -190,9 +190,9 @@
                         <button type="button" onclick="filterTable()" style="padding:4px 12px;background:var(--primary-500);color:white;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">Cari</button>
                     </div>
                     <select class="filter-select" id="filterBayar" onchange="filterTable()">
-                        <option value="all">Semua Bayar</option>
-                        <option value="sudah_membayar">Sudah Bayar</option>
-                        <option value="menunggu_verifikasi">Belum Bayar</option>
+                        <option value="all">Semua Status</option>
+                        <option value="menunggu_verifikasi">Menunggu Verifikasi</option>
+                        <option value="dalam_pembayaran">Dalam Pembayaran</option>
                     </select>
                 </div>
             </div>
@@ -226,15 +226,15 @@
                                 <td>{{ $calon->telepon }}</td>
                                 <td>{{ $calon->created_at->format('d M Y') }}</td>
                                 <td>
-                                    @if($calon->status === 'sudah_membayar')
-                                        <span class="badge-new badge-success">
+                                    @if($calon->status === 'dalam_pembayaran')
+                                        <span class="badge-new badge-warning">
                                             <span class="badge-dot"></span>
-                                            Sudah Bayar
+                                            Dalam Pembayaran
                                         </span>
-                                    @else
+                                    @elseif($calon->status === 'menunggu_verifikasi')
                                         <span class="badge-new badge-error">
                                             <span class="badge-dot"></span>
-                                            Belum Bayar
+                                            Menunggu Verifikasi
                                         </span>
                                     @endif
                                 </td>
@@ -244,19 +244,19 @@
                                             <span class="material-icons">description</span>
                                             Formulir
                                         </a>
-                                        @if($calon->status === 'sudah_membayar')
+                                        @if($calon->status === 'menunggu_verifikasi')
                                             <form method="POST" action="{{ route('sekretaris.verifikasi', $calon->id) }}" style="display: inline;">
                                                 @csrf
-                                                <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Verifikasi dan kirim pesan WhatsApp ke {{ $calon->nama }}?');">
+                                                <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Konfirmasi {{ $calon->nama }} masuk status Dalam Pembayaran? Pesan WA akan dikirim ke calon anggota dan bendahara.');">
                                                     <span class="material-icons">check_circle</span>
                                                     Verifikasi & Kirim WA
                                                 </button>
                                             </form>
-                                        @else
-                                            <button class="btn btn-secondary btn-sm" disabled style="cursor: not-allowed; opacity: 0.6;">
-                                                <span class="material-icons">lock</span>
-                                                Verifikasi
-                                            </button>
+                                        @elseif($calon->status === 'dalam_pembayaran')
+                                            <span class="badge-new badge-info" style="font-size: 10px; padding: 6px 10px;">
+                                                <span class="material-icons" style="font-size: 14px;">hourglass_top</span>
+                                                Menunggu Pembayaran
+                                            </span>
                                         @endif
                                     </div>
                                 </td>
@@ -675,6 +675,16 @@
             color: #9a0000;
         }
 
+        .badge-warning {
+            background-color: rgba(255, 187, 0, 0.1);
+            color: #d4a000;
+        }
+
+        .badge-info {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: #6366f1;
+        }
+
         .badge-dot {
             width: 5px;
             height: 5px;
@@ -688,6 +698,14 @@
 
         .badge-error .badge-dot {
             background-color: #9a0000;
+        }
+
+        .badge-warning .badge-dot {
+            background-color: #d4a000;
+        }
+
+        .badge-info .badge-dot {
+            background-color: #6366f1;
         }
 
         .action-buttons {

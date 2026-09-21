@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\CalonAnggota;
 use App\Models\KeluargaAnggota;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 use App\Models\LogSuperadmin;
 
 class PendaftaranController extends Controller
 {
+    public function __construct(
+        protected WhatsAppNotificationService $waNotification,
+    ) {}
+
     public function create()
     {
         return view('public.pendaftaran');
@@ -64,6 +69,13 @@ class PendaftaranController extends Controller
                         'nama' => $nama,
                     ]);
                 }
+            }
+
+            // Kirim notifikasi WhatsApp ke pengurus (ketua, bendahara, sekretaris)
+            try {
+                $this->waNotification->notifyPengurusBaruDaftar($calon);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Gagal mengirim notifikasi WhatsApp ke pengurus: ' . $e->getMessage());
             }
 
             return redirect('/daftar')->with('success', 'Pendaftaran berhasil! Data Anda akan diverifikasi oleh sekretaris.');

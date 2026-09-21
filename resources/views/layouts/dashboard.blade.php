@@ -187,6 +187,8 @@
         window._loadingBtn = null;
     };
     window.fetchAPI = function(url, opts) {
+        opts = opts || {};
+        opts.headers = Object.assign({ 'Accept': 'application/json' }, opts.headers || {});
         return fetch(url, opts).then(function(r) {
             if (!r.ok) {
                 return r.text().then(function(text) {

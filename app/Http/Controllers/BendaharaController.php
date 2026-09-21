@@ -599,56 +599,84 @@ class BendaharaController extends Controller
 
         $validated = $request->validate($rules);
 
-        if ($validated['tipe'] === 'pemasukan') {
-            $model = Pemasukan::create([
-                'tanggal' => $validated['tanggal'],
-                'kategori_pemasukan_id' => $validated['kategori_id'],
-                'jumlah' => $validated['jumlah'],
-                'keterangan' => $validated['keterangan'],
-                'created_by' => auth()->id(),
+        try {
+            if ($validated['tipe'] === 'pemasukan') {
+                $model = Pemasukan::create([
+                    'tanggal' => $validated['tanggal'],
+                    'kategori_pemasukan_id' => $validated['kategori_id'],
+                    'jumlah' => $validated['jumlah'],
+                    'keterangan' => $validated['keterangan'],
+                    'created_by' => auth()->id(),
+                ]);
+                $kategori = $model->kategoriPemasukan?->nama ?? '-';
+            } else {
+                $model = Pengeluaran::create([
+                    'tanggal' => $validated['tanggal'],
+                    'kategori_pengeluaran_id' => $validated['kategori_id'],
+                    'jumlah' => $validated['jumlah'],
+                    'keterangan' => $validated['keterangan'],
+                    'created_by' => auth()->id(),
+                ]);
+                $kategori = $model->kategoriPengeluaran?->nama ?? '-';
+            }
+
+            $model->addMedia($request->file('file_bukti'))->withCustomProperties(['uploaded_by' => auth()->id()])->toMediaCollection('bukti');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal simpan transaksi: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
             ]);
-            $kategori = $model->kategoriPemasukan?->nama ?? '-';
-        } else {
-            $model = Pengeluaran::create([
-                'tanggal' => $validated['tanggal'],
-                'kategori_pengeluaran_id' => $validated['kategori_id'],
-                'jumlah' => $validated['jumlah'],
-                'keterangan' => $validated['keterangan'],
-                'created_by' => auth()->id(),
-            ]);
-            $kategori = $model->kategoriPengeluaran?->nama ?? '-';
+
+            return response()->json(['success' => false, 'message' => 'Gagal menyimpan transaksi: ' . $e->getMessage()], 500);
         }
 
-        $model->addMedia($request->file('file_bukti'))->withCustomProperties(['uploaded_by' => auth()->id()])->toMediaCollection('bukti');
-
+        // --- Kirim kwitansi WA (di luar try utama agar transaksi tetap tersimpan) ---
         $waStatus = 'tidak_aktif';
         $waPenerima = trim((string) $request->input('wa_penerima', ''));
 
         if ($validated['tipe'] === 'pemasukan' && $waPenerima !== '' && $this->wa()->isReady()) {
-            $no = $this->kwitansiNo(now()->format('Y'), $model->id);
-            $keterangan = $model->keterangan ? ' (' . $model->keterangan . ')' : '';
-            $peruntukan = 'Pemasukan - ' . $kategori . $keterangan;
-            $namaPenerima = trim((string) $request->input('wa_nama', '')) ?: ('Transaksi #' . $model->id);
+            try {
+                $no = $this->kwitansiNo(now()->format('Y'), $model->id);
+                $keterangan = $model->keterangan ? ' (' . $model->keterangan . ')' : '';
+                $peruntukan = 'Pemasukan - ' . $kategori . $keterangan;
+                $namaPenerima = trim((string) $request->input('wa_nama', '')) ?: ('Transaksi #' . $model->id);
 
-            $pesan = 'Pembayaran *' . $peruntukan . "* telah dicatat:\n\n"
-                . '• Nominal: Rp ' . number_format($model->jumlah, 0, ',', '.') . "\n"
-                . '• Tanggal: ' . $model->tanggal->format('d/m/Y') . "\n\n"
-                . "Terlampir kwitansi pembayaran.\n\n"
-                . 'Terima kasih 🙏' . "\n"
-                . '— Bendahara RKM Al-Jannah';
+                $pesan = 'Pembayaran *' . $peruntukan . "* telah dicatat:\n\n"
+                    . '• Nominal: Rp ' . number_format($model->jumlah, 0, ',', '.') . "\n"
+                    . '• Tanggal: ' . $model->tanggal->format('d/m/Y') . "\n\n"
+                    . "Terlampir kwitansi pembayaran.\n\n"
+                    . 'Terima kasih 🙏' . "\n"
+                    . '— Bendahara RKM Al-Jannah';
 
-            $base64 = $this->kwitansi()->pdf([
-                'no' => $no,
-                'nama' => $namaPenerima,
-                'peruntukan' => $peruntukan,
-                'nominal' => $model->jumlah,
-                'tanggal' => $model->tanggal->format('d/m/Y'),
-                'dibayar_oleh' => auth()->user()->nama ?? 'Bendahara',
-            ]);
+                $base64 = $this->kwitansi()->pdf([
+                    'no' => $no,
+                    'nama' => $namaPenerima,
+                    'peruntukan' => $peruntukan,
+                    'nominal' => $model->jumlah,
+                    'tanggal' => $model->tanggal->format('d/m/Y'),
+                    'dibayar_oleh' => auth()->user()->nama ?? 'Bendahara',
+                ]);
 
-            $res = $this->wa()->sendDocument($waPenerima, $base64, 'Kwitansi-' . $no . '.pdf', 'application/pdf', $pesan);
+                $res = $this->wa()->sendDocument($waPenerima, $base64, 'Kwitansi-' . $no . '.pdf', 'application/pdf', $pesan);
 
-            $waStatus = isset($res['error']) ? 'gagal' : 'terkirim';
+                if (isset($res['error'])) {
+                    \Illuminate\Support\Facades\Log::warning('WA kwitansi transaksi gagal: ' . $res['error'], [
+                        'transaksi_id' => $model->id,
+                        'telepon' => $waPenerima,
+                    ]);
+                    // Fallback: kirim teks tanpa lampiran
+                    $resText = $this->wa()->send($waPenerima, $pesan);
+                    $waStatus = isset($resText['error']) ? 'gagal' : 'terkirim_teks';
+                } else {
+                    $waStatus = 'terkirim';
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Error kirim kwitansi WA transaksi: ' . $e->getMessage(), [
+                    'transaksi_id' => $model->id,
+                    'telepon' => $waPenerima,
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                $waStatus = 'gagal';
+            }
         }
 
         return response()->json([
@@ -694,24 +722,32 @@ class BendaharaController extends Controller
             'file_bukti' => 'required|file|max:2048',
         ]);
 
-        $pemasukan = Pemasukan::create([
-            'tanggal' => $validated['tanggal'],
-            'kategori_pemasukan_id' => $validated['kategori_pemasukan_id'],
-            'jumlah' => $validated['jumlah'],
-            'keterangan' => $validated['keterangan'],
-            'created_by' => auth()->id(),
-        ]);
+        try {
+            $pemasukan = Pemasukan::create([
+                'tanggal' => $validated['tanggal'],
+                'kategori_pemasukan_id' => $validated['kategori_pemasukan_id'],
+                'jumlah' => $validated['jumlah'],
+                'keterangan' => $validated['keterangan'],
+                'created_by' => auth()->id(),
+            ]);
 
-        $pemasukan->addMedia($request->file('file_bukti'))->withCustomProperties(['uploaded_by' => auth()->id()])->toMediaCollection('bukti');
+            $pemasukan->addMedia($request->file('file_bukti'))->withCustomProperties(['uploaded_by' => auth()->id()])->toMediaCollection('bukti');
 
-        LogSuperadmin::create([
-            'user_id' => auth()->id(),
-            'aksi' => 'create',
-            'deskripsi' => 'Menambahkan pemasukan: Rp ' . number_format($pemasukan->jumlah, 0, ',', '.') . ' (' . ($pemasukan->kategoriPemasukan?->nama ?? '-') . ')',
-            'modul' => 'bendahara',
-            'referensi_id' => $pemasukan->id,
-            'ip_address' => request()->ip(),
-        ]);
+            LogSuperadmin::create([
+                'user_id' => auth()->id(),
+                'aksi' => 'create',
+                'deskripsi' => 'Menambahkan pemasukan: Rp ' . number_format($pemasukan->jumlah, 0, ',', '.') . ' (' . ($pemasukan->kategoriPemasukan?->nama ?? '-') . ')',
+                'modul' => 'bendahara',
+                'referensi_id' => $pemasukan->id,
+                'ip_address' => request()->ip(),
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal simpan pemasukan: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(['success' => false, 'message' => 'Gagal menyimpan pemasukan: ' . $e->getMessage()], 500);
+        }
 
         return response()->json([
             'success' => true,
@@ -735,24 +771,32 @@ class BendaharaController extends Controller
             'file_bukti' => 'required|file|max:2048',
         ]);
 
-        $pengeluaran = Pengeluaran::create([
-            'tanggal' => $validated['tanggal'],
-            'kategori_pengeluaran_id' => $validated['kategori_pengeluaran_id'],
-            'jumlah' => $validated['jumlah'],
-            'keterangan' => $validated['keterangan'],
-            'created_by' => auth()->id(),
-        ]);
+        try {
+            $pengeluaran = Pengeluaran::create([
+                'tanggal' => $validated['tanggal'],
+                'kategori_pengeluaran_id' => $validated['kategori_pengeluaran_id'],
+                'jumlah' => $validated['jumlah'],
+                'keterangan' => $validated['keterangan'],
+                'created_by' => auth()->id(),
+            ]);
 
-        $pengeluaran->addMedia($request->file('file_bukti'))->withCustomProperties(['uploaded_by' => auth()->id()])->toMediaCollection('bukti');
+            $pengeluaran->addMedia($request->file('file_bukti'))->withCustomProperties(['uploaded_by' => auth()->id()])->toMediaCollection('bukti');
 
-        LogSuperadmin::create([
-            'user_id' => auth()->id(),
-            'aksi' => 'create',
-            'deskripsi' => 'Menambahkan pengeluaran: Rp ' . number_format($pengeluaran->jumlah, 0, ',', '.') . ' (' . ($pengeluaran->kategoriPengeluaran?->nama ?? '-') . ')',
-            'modul' => 'bendahara',
-            'referensi_id' => $pengeluaran->id,
-            'ip_address' => request()->ip(),
-        ]);
+            LogSuperadmin::create([
+                'user_id' => auth()->id(),
+                'aksi' => 'create',
+                'deskripsi' => 'Menambahkan pengeluaran: Rp ' . number_format($pengeluaran->jumlah, 0, ',', '.') . ' (' . ($pengeluaran->kategoriPengeluaran?->nama ?? '-') . ')',
+                'modul' => 'bendahara',
+                'referensi_id' => $pengeluaran->id,
+                'ip_address' => request()->ip(),
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal simpan pengeluaran: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(['success' => false, 'message' => 'Gagal menyimpan pengeluaran: ' . $e->getMessage()], 500);
+        }
 
         return response()->json([
             'success' => true,
@@ -1747,13 +1791,13 @@ class BendaharaController extends Controller
 
     public function verifikasi()
     {
-        $calonAnggota = CalonAnggota::where('status', 'menunggu_verifikasi')->latest()->paginate(20);
+        $calonAnggota = CalonAnggota::where('status', 'dalam_pembayaran')->latest()->paginate(20);
         return view('dashboard.bendahara.verifikasi', compact('calonAnggota'));
     }
 
     public function getVerifikasiData()
     {
-        $calon = CalonAnggota::where('status', 'menunggu_verifikasi')
+        $calon = CalonAnggota::where('status', 'dalam_pembayaran')
             ->latest()
             ->get();
 
@@ -1764,7 +1808,7 @@ class BendaharaController extends Controller
                 'tanggal' => $c->created_at->format('d/m/Y'),
                 'nama' => $c->nama,
                 'telepon' => $c->telepon,
-                'status' => 'Belum Dibayar',
+                'status' => 'Menunggu Pembayaran',
                 'is_lunas' => false,
             ]),
         ]);
@@ -1774,59 +1818,130 @@ class BendaharaController extends Controller
     {
         $calon = CalonAnggota::findOrFail($id);
 
-        if ($calon->status !== 'menunggu_verifikasi') {
+        if ($calon->status !== 'dalam_pembayaran') {
             return response()->json(['success' => false, 'message' => 'Status calon anggota tidak valid.'], 400);
         }
 
         $nominal = 30000;
 
-        $pemasukan = Pemasukan::create([
-            'tanggal' => now()->toDateString(),
-            'kategori_pemasukan_id' => 3,
-            'jumlah' => $nominal,
-            'keterangan' => 'Pembayaran pendaftaran - ' . $calon->nama,
-            'created_by' => auth()->id(),
-        ]);
+        // --- Semua perubahan DB dalam transaction ---
+        \DB::beginTransaction();
 
-        Pembayaran::create([
-            'tanggal_daftar' => now()->toDateString(),
-            'calon_anggota_id' => $calon->id,
-            'nominal_pembayaran' => $nominal,
-            'status' => 'sudah_dibayar',
-            'verified_by' => auth()->id(),
-            'pemasukan_id' => $pemasukan->id,
-        ]);
+        try {
+            // Buat anggota resmi
+            $lastId = Anggota::max('id') ?? 0;
+            $nomorAnggota = 'RKM-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
 
-        $calon->update(['status' => 'sudah_membayar']);
+            while (Anggota::where('nomor_anggota', $nomorAnggota)->exists()) {
+                $lastId++;
+                $nomorAnggota = 'RKM-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+            }
 
-        $waStatus = 'tidak_aktif';
-        if ($calon->telepon && $this->wa()->isReady()) {
-            $no = $this->kwitansiNo(now()->format('Y'), $pemasukan->id);
-
-            $pesan = "Assalamu'alaikum *{$calon->nama}*,\n\n"
-                . "Pembayaran pendaftaran Anda telah kami terima:\n\n"
-                . "• Jenis: Pembayaran pendaftaran anggota baru\n"
-                . '• Nominal: Rp ' . number_format($nominal, 0, ',', '.') . "\n"
-                . '• Tanggal: ' . now()->format('d/m/Y') . "\n\n"
-                . "Terlampir kwitansi pembayaran.\n\n"
-                . 'Terima kasih 🙏' . "\n"
-                . '— Bendahara RKM Al-Jannah';
-
-            $base64 = $this->kwitansi()->pdf([
-                'no' => $no,
+            $anggota = Anggota::create([
+                'nomor_anggota' => $nomorAnggota,
+                'calon_anggota_id' => $calon->id,
                 'nama' => $calon->nama,
-                'peruntukan' => 'Pembayaran pendaftaran anggota baru',
-                'nominal' => $nominal,
-                'tanggal' => now()->format('d/m/Y'),
-                'dibayar_oleh' => auth()->user()->nama ?? 'Bendahara',
+                'email' => $calon->email,
+                'telepon' => $calon->telepon,
+                'alamat' => $calon->alamat,
+                'status' => 'aktif',
+                'created_by' => auth()->id(),
             ]);
 
-            $res = $this->wa()->sendDocument($calon->telepon, $base64, 'Kwitansi-' . $no . '.pdf', 'application/pdf', $pesan);
+            // Catat pemasukan
+            $pemasukan = Pemasukan::create([
+                'tanggal' => now()->toDateString(),
+                'kategori_pemasukan_id' => 3,
+                'jumlah' => $nominal,
+                'keterangan' => 'Pembayaran pendaftaran - ' . $calon->nama . ' (' . $nomorAnggota . ')',
+                'created_by' => auth()->id(),
+            ]);
 
-            $waStatus = isset($res['error']) ? 'gagal' : 'terkirim';
+            // Catat pembayaran
+            Pembayaran::create([
+                'tanggal_daftar' => now()->toDateString(),
+                'calon_anggota_id' => $calon->id,
+                'nominal_pembayaran' => $nominal,
+                'status' => 'sudah_dibayar',
+                'verified_by' => auth()->id(),
+                'pemasukan_id' => $pemasukan->id,
+            ]);
+
+            // Update status calon anggota
+            $calon->update(['status' => 'disetujui']);
+
+            LogSuperadmin::create([
+                'user_id' => auth()->id(),
+                'aksi' => 'create',
+                'deskripsi' => 'Verifikasi pembayaran pendaftaran: ' . $calon->nama . ' - ' . $nomorAnggota,
+                'modul' => 'bendahara',
+                'referensi_id' => $calon->id,
+                'ip_address' => request()->ip(),
+            ]);
+
+            \DB::commit();
+        } catch (\Throwable $e) {
+            \DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Gagal verifikasi pembayaran: ' . $e->getMessage(), [
+                'calon_id' => $calon->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(['success' => false, 'message' => 'Gagal memproses verifikasi: ' . $e->getMessage()], 500);
         }
 
-        return response()->json(['success' => true, 'wa' => $waStatus]);
+        // --- Kirim kwitansi via WhatsApp (di luar transaction) ---
+        $waStatus = 'tidak_aktif';
+        if ($calon->telepon && $this->wa()->isReady()) {
+            try {
+                $no = $this->kwitansiNo(now()->format('Y'), $pemasukan->id);
+
+                $pesan = "Assalamu'alaikum *{$calon->nama}*,\n\n"
+                    . "Pembayaran pendaftaran Anda telah kami terima:\n\n"
+                    . "• Jenis: Pembayaran pendaftaran anggota baru\n"
+                    . "• Nomor Anggota: *{$nomorAnggota}*\n"
+                    . '• Nominal: Rp ' . number_format($nominal, 0, ',', '.') . "\n"
+                    . '• Tanggal: ' . now()->format('d/m/Y') . "\n\n"
+                    . "Status Anda: *AKTIF*\n\n"
+                    . "Terlampir kwitansi pembayaran.\n\n"
+                    . "Selamat, Anda telah resmi menjadi anggota RKM Al-Jannah! 🎉\n"
+                    . 'Terima kasih 🙏' . "\n"
+                    . '— Bendahara RKM Al-Jannah';
+
+                $base64 = $this->kwitansi()->pdf([
+                    'no' => $no,
+                    'nama' => $calon->nama,
+                    'peruntukan' => 'Pembayaran pendaftaran anggota baru',
+                    'nominal' => $nominal,
+                    'tanggal' => now()->format('d/m/Y'),
+                    'dibayar_oleh' => auth()->user()->nama ?? 'Bendahara',
+                ]);
+
+                $res = $this->wa()->sendDocument($calon->telepon, $base64, 'Kwitansi-' . $no . '.pdf', 'application/pdf', $pesan);
+
+                if (isset($res['error'])) {
+                    \Illuminate\Support\Facades\Log::warning('WA kwitansi gagal: ' . $res['error'], [
+                        'calon' => $calon->nama,
+                        'telepon' => $calon->telepon,
+                    ]);
+
+                    // Fallback: kirim teks tanpa lampiran
+                    $resText = $this->wa()->send($calon->telepon, $pesan);
+                    $waStatus = isset($resText['error']) ? 'gagal' : 'terkirim_teks';
+                } else {
+                    $waStatus = 'terkirim';
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Error kirim kwitansi WA: ' . $e->getMessage(), [
+                    'calon' => $calon->nama,
+                    'telepon' => $calon->telepon,
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                $waStatus = 'gagal';
+            }
+        }
+
+        return response()->json(['success' => true, 'wa' => $waStatus, 'nomor_anggota' => $nomorAnggota]);
     }
 
     // ---------------------------------------------------------------

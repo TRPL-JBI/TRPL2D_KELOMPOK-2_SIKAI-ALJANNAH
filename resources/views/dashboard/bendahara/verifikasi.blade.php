@@ -24,7 +24,7 @@
 
     <div class="vp-card">
         <div class="vp-card-header">
-            <h3>Calon Anggota Menunggu Pembayaran</h3>
+            <h3>Calon Anggota Dalam Pembayaran</h3>
         </div>
         <div class="vp-table-wrap">
             <table>
@@ -82,14 +82,14 @@
                 '</tr>';
             }
             if (!data.length) {
-                html = '<tr><td colspan="6" style="padding:60px 32px;text-align:center;color:#9ca3af;">Semua calon anggota sudah terverifikasi</td></tr>';
+                html = '<tr><td colspan="6" style="padding:60px 32px;text-align:center;color:#9ca3af;">Tidak ada calon anggota yang menunggu pembayaran</td></tr>';
             }
             tbody.innerHTML = html;
         }
 
         window.verifikasi = function(id) {
             var btn = window._loadingBtn;
-            if (!confirm('Konfirmasi pembayaran Rp 30.000 untuk calon anggota ini?')) { enableBtn(btn); return; }
+            if (!confirm('Konfirmasi pembayaran Rp 30.000 untuk calon anggota ini? Status akan berubah menjadi "Disetujui" dan data akan masuk ke tabel anggota resmi.')) { enableBtn(btn); return; }
             fetchAPI('/bendahara/verifikasi/' + id, {
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
@@ -97,8 +97,8 @@
             .then(function(res) {
                 if (res.success) {
                     fetchVerifikasiData();
-                    var msg = 'Pembayaran terverifikasi';
-                    if (res.wa === 'terkirim') msg += ' & kwitansi terkirim via WhatsApp';
+                    var msg = 'Pembayaran terverifikasi. Anggota ' + (res.nomor_anggota || '') + ' telah dibuat.';
+                    if (res.wa === 'terkirim') msg += ' Kwitansi terkirim via WhatsApp.';
                     else if (res.wa === 'gagal') msg += ' (kwitansi WhatsApp gagal terkirim)';
                     showVpToast(msg);
                 } else {

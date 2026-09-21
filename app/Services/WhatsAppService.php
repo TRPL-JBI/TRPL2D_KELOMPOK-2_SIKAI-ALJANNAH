@@ -130,16 +130,49 @@ class WhatsAppService
      */
     public function sendDocument(string $to, string $base64, string $filename, string $mimeType, ?string $caption = null): array
     {
+        $normalizedTo = $this->normalizeNumber($to);
+        $b64Len = strlen($base64);
+
+        // Pre-flight: pastikan base64 tidak kosong
+        if ($base64 === '') {
+            \Illuminate\Support\Facades\Log::error('WA sendDocument DITOLAK: base64 kosong', [
+                'to' => $normalizedTo,
+                'filename' => $filename,
+            ]);
+
+            return ['error' => 'base64 kosong'];
+        }
+
         try {
-            $result = WhatsApp::web(self::SESSION_ID)->messages()->sendDocument($this->normalizeNumber($to), array_filter([
+            \Illuminate\Support\Facades\Log::info('WA sendDocument dimulai', [
+                'to' => $normalizedTo,
+                'filename' => $filename,
+                'mimeType' => $mimeType,
+                'b64_length' => $b64Len,
+                'caption_length' => strlen($caption ?? ''),
+            ]);
+
+            $result = WhatsApp::web(self::SESSION_ID)->messages()->sendDocument($normalizedTo, array_filter([
                 'base64' => $base64,
                 'mimeType' => $mimeType,
                 'filename' => $filename,
                 'caption' => $caption,
             ]));
 
+            \Illuminate\Support\Facades\Log::info('WA sendDocument response', [
+                'result' => $result,
+            ]);
+
             return is_array($result) ? $result : ['success' => true];
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('WA sendDocument ERROR: ' . $e->getMessage(), [
+                'to' => $normalizedTo,
+                'filename' => $filename,
+                'b64_length' => $b64Len,
+                'exception_class' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return ['error' => $e->getMessage()];
         }
     }
