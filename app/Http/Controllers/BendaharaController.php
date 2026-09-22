@@ -1019,8 +1019,15 @@ class BendaharaController extends Controller
                 continue;
             }
 
+            // Ambil nominal dari riwayat pembayaran iuran yang sudah ada
+            $paidIuran = $iuran->first(fn ($r) => $r->status === 'lunas');
+            if (! $paidIuran) {
+                continue; // Belum ada riwayat pembayaran, skip
+            }
+            $nominalPerBulan = (float) $paidIuran->nominal;
+
             $range = $this->formatBulanRange($belum);
-            $total = count($belum) * 10000;
+            $total = count($belum) * $nominalPerBulan;
 
             $pesan = "Assalamu'alaikum *{$anggota->nama}*,\n\n"
                 . "Kami mengingatkan tagihan iuran tahunan RKM Al-Jannah tahun {$tahun}:\n\n"
