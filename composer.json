@@ -14,6 +14,7 @@
         "laravel/tinker": "^2.10.1",
         "openspout/openspout": "*",
         "phpoffice/phpword": "^1.4",
+        "spatie/laravel-backup": "*",
         "spatie/laravel-medialibrary": "^11.23"
     },
     "require-dev": {
