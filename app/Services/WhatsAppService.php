@@ -112,8 +112,16 @@ class WhatsAppService
      *
      * @return array<string, mixed>
      */
-    public function send(string $to, string $text): array
+    public function send(string $to, string $text, ?int $delayMs = null): array
     {
+        // Terapkan jeda jika di-specifikasikan (ms)
+        if ($delayMs !== null && $delayMs > 0) {
+            \Illuminate\Support\Facades\Log::info("WA send delay ${delayMs}ms sebelum mengirim ke {$to}");
+            \Illuminate\Support\Facades\Log::info("WA send delay: menunggu ${delayMs}ms sebelum mengirim pesan");
+            \Illuminate\Support\Facades\Log::info("WA send delay: catatan - jeda ini membantu mitigasi blokir WhatsApp");
+            sleep($delayMs / 1000);
+        }
+
         try {
             $result = WhatsApp::web(self::SESSION_ID)->messages()->sendText($this->normalizeNumber($to), $text);
 
@@ -121,6 +129,110 @@ class WhatsAppService
         } catch (\Throwable $e) {
             return ['error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Terapkan spintax (variasi teks) ke pesan.
+     * Format spintax: {pilihan1|pilihan2|pilihan3}
+     *
+     * @param string $text Teks yang mungkin berisi spintax
+     * @return string Teks dengan variasi acak
+     */
+    public function applySpintaxPublic(string $text): string
+    {
+        return $this->applySpintax($text);
+    }
+
+    /**
+     * Terapkan spintax (variasi teks) ke pesan.
+     * Format spintax: {pilihan1|pilihan2|pilihan3}
+     *
+     * @param string $text Teks yang mungkin berisi spintax
+     * @return string Teks dengan variasi acak
+     */
+    protected function applySpintax(string $text): string
+    {
+        // Cari pola spintax {pilihan1|pilihan2|pilihan3}
+        if (!preg_match('/\{([^}]+)\}/', $text)) {
+            return $text;
+        }
+
+        // Ganti setiap blok spintax dengan pilihan acak
+        return preg_replace_callback(
+            '/\{([^}]+)\}/',
+            function ($matches) {
+                $options = explode('|', $matches[1]);
+                return $options[array_rand($options)];
+            },
+            $text
+        );
+    }
+
+    /**
+     * Kirim pesan ke banyak penerima dengan jeda antar pesan (mitigasi blokir).
+     *
+     * @param array $recipients Daftar nomor telepon (dalam format internasional tanpa +)
+     * @param string $text Teks pesan (boleh berisi spintax {pilihan1|pilihan2})
+     * @param int $delayMs Jeda antar pesan dalam milidetik (default: 15000 = 15 detik)
+     * @param bool $randomDelay Jeda acak antara min/max (ms)
+     * @return array['terkirim' => int, 'gagal' => int, 'detail' => array]
+     */
+    public function sendBulk(array $recipients, string $text, int $delayMs = 15000, bool $randomDelay = true): array
+    {
+        $terkirim = 0;
+        $gagal = 0;
+        $detail = [];
+
+        // Terapkan variasi spintax jika ada
+        $textVaried = $this->applySpintax($text);
+
+        foreach ($recipients as $index => $to) {
+            // Hitung jeda: dasar + acak jika diaktifkan
+            $delay = $delayMs;
+            if ($randomDelay) {
+                // Jeda acak 10-30 detik (10000-30000ms)
+                $randomFactor = 10000 + mt_rand(0, 20000);
+                $delay = $randomFactor;
+            }
+
+            // Kecilkan delay untuk penerima pertama (no delay)
+            if ($index > 0) {
+                $recipient = $to;
+                \Illuminate\Support\Facades\Log::info("WA bulk send: ke-".($index+1)."/".count($recipients)." - jeda ${delay}ms ke {$recipient}");
+                sleep($delay / 1000);
+            }
+
+            $result = $this->send($to, $textVaried);
+
+            if (isset($result['error'])) {
+                $gagal++;
+                $detail[] = [
+                    'nomor' => $to,
+                    'status' => 'gagal',
+                    'error' => $result['error'],
+                ];
+            } else {
+                $terkirim++;
+                $detail[] = [
+                    'nomor' => $to,
+                    'status' => 'terkirim',
+                    'waktu' => now()->format('H:i:s'),
+                ];
+            }
+
+            // Log progres setiap 10 pesan
+            if (($index + 1) % 10 === 0) {
+                \Illuminate\Support\Facades\Log::info("WA bulk send progres: {$terkirim} terkirim, {$gagal} gagal setelah ".($index+1)." pesan");
+            }
+        }
+
+        return [
+            'terkirim' => $terkirim,
+            'gagal' => $gagal,
+            'total' => count($recipients),
+            'detail' => $detail,
+            'pesan' => $textVaried,
+        ];
     }
 
     /**

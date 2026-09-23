@@ -206,28 +206,65 @@ class WhatsAppNotificationService
 
     /**
      * Kirim pesan ke banyak penerima, kembalikan ringkasan hasil.
+     * Dilengkapi jeda antar pesan (mitigasi blokir) dan variasi teks (spintax).
      */
     protected function sendToMany(Collection $recipients, callable $messageBuilder): array
     {
-        $results = [];
+        $terkirim = 0;
+        $gagal = 0;
+        $detail = [];
 
-        foreach ($recipients as $recipient) {
+        foreach ($recipients as $index => $recipient) {
+            // Bangun pesan
             $message = $messageBuilder($recipient);
-            $result = $this->whatsapp->send($recipient->no_whatsapp, $message);
 
-            $results[] = [
+            // Terapkan variasi spintax jika ada di dalam pesan
+            $messageVaried = $this->whatsapp->applySpintax($message);
+
+            // Hitung jeda: 15 detik dasar, dengan jeda acak 10-30 detik untuk mitigasi blokir
+            // Penerima pertama bisa tanpa delay (index 0), sisanya mendapat delay
+            $baseDelay = 15000; // 15 detik
+            $randomDelay = 10000 + mt_rand(0, 20000); // 10-30 detik acak
+            $delay = ($index > 0) ? $baseDelay + $randomDelay : 0;
+
+            // Log jeda (hanya jika ada delay)
+            if ($delay > 0) {
+                \Illuminate\Support\Facades\Log::info("WA sendToMany: ke-".($index+1)."/".count($recipients)." - jeda ${delay}ms ke {$recipient->no_whatsapp}");
+            }
+
+            // Terapkan delay jika perlu
+            if ($delay > 0) {
+                sleep($delay / 1000);
+            }
+
+            $result = $this->whatsapp->send($recipient->no_whatsapp, $messageVaried);
+
+            $detail[] = [
                 'nama' => $recipient->nama,
                 'role' => $recipient->role,
+                'nomor' => $recipient->no_whatsapp,
                 'success' => ! isset($result['error']),
                 'error' => $result['error'] ?? null,
             ];
+
+            if (isset($result['error'])) {
+                $gagal++;
+            } else {
+                $terkirim++;
+            }
+
+            // Log progres setiap 5 penerima
+            if (($index + 1) % 5 === 0) {
+                \Illuminate\Support\Facades\Log::info("WA sendToMany progres: {$terkirim} terkirim, {$gagal} gagal setelah ".($index+1)." pesan");
+            }
         }
 
         return [
             'success' => true,
-            'sent' => count(array_filter($results, fn($r) => $r['success'])),
-            'failed' => count(array_filter($results, fn($r) => ! $r['success'])),
-            'details' => $results,
+            'sent' => $terkirim,
+            'failed' => $gagal,
+            'total' => count($recipients),
+            'details' => $detail,
         ];
     }
 }
